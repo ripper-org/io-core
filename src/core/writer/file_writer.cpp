@@ -2,9 +2,9 @@
 
 #include <cstddef>
 #include <filesystem>
+#include <ios>
 #include <span>
 #include <stdexcept>
-#include <string_view>
 #include <utility>
 
 namespace ripper::io::core
@@ -16,51 +16,55 @@ namespace ripper::io::core
     file_writer::file_writer(std::filesystem::path path)
         : _path{std::move(path)},
           _canonicalPath{std::filesystem::absolute(_path).string()},
-          _handle{_path, std::ios::binary | std::ios::out | std::ios::trunc}
+          _handle{}
     {
-        if (!_handle.is_open())
-        {
-            throw std::runtime_error{"Failed to open output file: " + _path.string()};
-        }
+        _handle.exceptions(std::ios::badbit | std::ios::failbit);
+        _handle.open(_path, std::ios::binary | std::ios::out | std::ios::trunc);
     }
 
     /// Return whether the underlying output stream is open.
-    bool file_writer::is_open() const noexcept
+    bool file_writer::is_open()
     {
         return _handle.is_open();
     }
 
     /// Return the current logical write offset.
-    std::size_t file_writer::tell() const noexcept
+    std::size_t file_writer::tell()
     {
-        return static_cast<std::size_t>(_currentOffset);
+        const std::streampos currentPos = _handle.tellp();
+
+        if (currentPos < 0)
+        {
+            throw std::runtime_error{"Unable to read current write position for: " + _path.string()};
+        }
+
+        return static_cast<std::size_t>(currentPos);
     }
 
     /// Return the canonical absolute file path.
-    std::string_view file_writer::get_path() const noexcept
+    std::string_view file_writer::get_path() const
     {
         return _canonicalPath;
     }
 
     /// Write bytes from `buffer` to the current stream position.
     ///
-    /// Returns 0 if the stream is not open, the input buffer is empty,
-    /// or a write failure occurs.
+    /// Returns 0 only for an empty input buffer.
+    /// Throws when the stream is closed or the underlying write fails.
     std::size_t file_writer::write(std::span<const std::byte> buffer)
     {
-        if (!is_open() || buffer.empty())
+        if (!is_open())
+        {
+            throw std::runtime_error{"Cannot write to a closed file_writer: " + _path.string()};
+        }
+
+        if (buffer.empty())
         {
             return 0;
         }
 
         _handle.write(reinterpret_cast<const char *>(buffer.data()), static_cast<std::streamsize>(buffer.size()));
 
-        if (_handle.fail())
-        {
-            return 0;
-        }
-
-        _currentOffset += buffer.size();
         return buffer.size();
     }
 
@@ -69,18 +73,11 @@ namespace ripper::io::core
     {
         if (!is_open())
         {
-            return;
+            throw std::runtime_error{"Cannot seek a closed file_writer: " + _path.string()};
         }
 
         _handle.clear();
         _handle.seekp(static_cast<std::streamoff>(offset), std::ios::beg);
-
-        if (_handle.fail())
-        {
-            return;
-        }
-
-        _currentOffset = offset;
     }
 
     /// Flush buffered bytes to backing storage.
@@ -88,7 +85,7 @@ namespace ripper::io::core
     {
         if (!is_open())
         {
-            return;
+            throw std::runtime_error{"Cannot flush a closed file_writer: " + _path.string()};
         }
 
         _handle.flush();

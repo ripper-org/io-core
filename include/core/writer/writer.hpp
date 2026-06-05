@@ -20,10 +20,10 @@ namespace ripper::io::core
         virtual ~writer() = default;
 
         /// Return `true` if this writer is open and ready for output.
-        [[nodiscard]] virtual bool is_open() const noexcept = 0;
+        [[nodiscard]] virtual bool is_open() = 0;
 
         /// Return the current stream write position.
-        [[nodiscard]] virtual std::size_t tell() const noexcept = 0;
+        [[nodiscard]] virtual std::size_t tell() = 0;
 
         /// Write bytes from `buffer` at the current stream position.
         ///

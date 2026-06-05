@@ -26,7 +26,7 @@ namespace ripper::io::core
         ///
         /// The target file is opened in binary mode and truncated if it exists.
         ///
-        /// @throws std::runtime_error if the file cannot be opened.
+        /// @throws std::ios_base::failure from the stream on I/O failures.
         explicit file_writer(std::filesystem::path path);
 
         ~file_writer() override = default;
@@ -38,15 +38,17 @@ namespace ripper::io::core
         file_writer &operator=(file_writer &&) noexcept = default;
 
         /// Return `true` if the backing file stream is open.
-        [[nodiscard]] bool is_open() const noexcept override;
+        [[nodiscard]] bool is_open() override;
 
         /// Return the current logical stream offset.
-        [[nodiscard]] std::size_t tell() const noexcept override;
+        [[nodiscard]] std::size_t tell() override;
 
         /// Write bytes from `buffer` at the current stream offset.
         ///
-        /// Returns the number of bytes written. Returns 0 when closed or on
-        /// stream write failure.
+        /// Returns the number of bytes written.
+        ///
+        /// @throws std::runtime_error when the writer is closed.
+        /// @throws std::ios_base::failure on stream write failures.
         [[nodiscard]] std::size_t write(std::span<const std::byte> buffer) override;
 
         /// Seek to an absolute stream offset.
@@ -59,12 +61,11 @@ namespace ripper::io::core
         void close() override;
 
         /// Return the canonical absolute path for the backing file.
-        [[nodiscard]] std::string_view get_path() const noexcept;
+        [[nodiscard]] std::string_view get_path() const;
 
     private:
         std::filesystem::path _path;
         std::string _canonicalPath;
         std::ofstream _handle;
-        std::uint64_t _currentOffset{0};
     };
 }

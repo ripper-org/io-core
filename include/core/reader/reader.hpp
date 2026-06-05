@@ -19,16 +19,16 @@ namespace ripper::io::core
         virtual ~reader() = default;
 
         /// Return `true` if this reader is open and ready for input.
-        [[nodiscard]] virtual bool is_open() const noexcept = 0;
+        [[nodiscard]] virtual bool is_open() = 0;
 
         /// Return `true` when the input stream reached end-of-file.
-        [[nodiscard]] virtual bool eof() const noexcept = 0;
+        [[nodiscard]] virtual bool eof() = 0;
 
         /// Return the total size in bytes of the backing data source.
-        [[nodiscard]] virtual std::uint64_t size() const noexcept = 0;
+        [[nodiscard]] virtual std::uint64_t size() = 0;
 
         /// Return the current logical read position.
-        [[nodiscard]] virtual std::size_t tell() const noexcept = 0;
+        [[nodiscard]] virtual std::size_t tell() = 0;
 
         /// Return the next byte without advancing the current position.
         [[nodiscard]] virtual std::byte peek() = 0;
