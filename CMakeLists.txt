@@ -5,18 +5,35 @@ project(io_ripper_core
     LANGUAGES CXX
 )
 
+option(IO_RIPPER_CORE_BUILD_SHARED "Build io_ripper_core as a shared library" ON)
+
+# Keep tests off by default when consumed via add_subdirectory/FetchContent.
+if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+    option(IO_RIPPER_CORE_ENABLE_TESTS "Build io_ripper_core tests" ON)
+else()
+    option(IO_RIPPER_CORE_ENABLE_TESTS "Build io_ripper_core tests" OFF)
+endif()
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-include(CTest)
+if(IO_RIPPER_CORE_ENABLE_TESTS)
+    include(CTest)
+endif()
 
 file(GLOB_RECURSE IO_RIPPER_CORE_SOURCES
     CONFIGURE_DEPENDS
     src/core/*.cpp
 )
 
-add_library(io_ripper_core SHARED
+if(IO_RIPPER_CORE_BUILD_SHARED)
+    set(IO_RIPPER_CORE_LIBRARY_TYPE SHARED)
+else()
+    set(IO_RIPPER_CORE_LIBRARY_TYPE STATIC)
+endif()
+
+add_library(io_ripper_core ${IO_RIPPER_CORE_LIBRARY_TYPE}
     ${IO_RIPPER_CORE_SOURCES}
 )
 
@@ -44,6 +61,7 @@ install(TARGETS io_ripper_core
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
@@ -74,7 +92,7 @@ install(FILES
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/io_ripper_core
 )
 
-if(BUILD_TESTING)
+if(IO_RIPPER_CORE_ENABLE_TESTS)
     include(FetchContent)
 
     FetchContent_Declare(
@@ -85,5 +103,6 @@ if(BUILD_TESTING)
 
     FetchContent_MakeAvailable(Catch2)
 
+    set(BUILD_TESTING ON CACHE BOOL "Enable testing" FORCE)
     add_subdirectory(tests)
 endif()
