@@ -9,6 +9,8 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+include(CTest)
+
 file(GLOB_RECURSE IO_RIPPER_CORE_SOURCES
     CONFIGURE_DEPENDS
     src/core/*.cpp
@@ -71,3 +73,17 @@ install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/io_ripper_coreConfigVersion.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/io_ripper_core
 )
+
+if(BUILD_TESTING)
+    include(FetchContent)
+
+    FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG v3.7.1
+    )
+
+    FetchContent_MakeAvailable(Catch2)
+
+    add_subdirectory(tests)
+endif()
