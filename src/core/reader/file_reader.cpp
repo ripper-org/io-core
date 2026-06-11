@@ -1,5 +1,7 @@
 #include "core/reader/file_reader.hpp"
 
+#include "core/util/numeric_cast.hpp"
+
 #include <cstddef>
 #include <filesystem>
 #include <ios>
@@ -89,8 +91,10 @@ std::size_t file_reader::read(std::span<std::byte> buffer)
         return 0;
     }
 
+    // std::istream accepts char buffers; conversion from std::byte storage is required here.
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     _handle.read(reinterpret_cast<char*>(buffer.data()),
-                 static_cast<std::streamsize>(buffer.size()));
+                 utils::checked_narrow<std::streamsize>(buffer.size(), "read size"));
 
     return static_cast<std::size_t>(_handle.gcount());
 }
@@ -108,9 +112,11 @@ std::size_t file_reader::read_at(std::span<std::byte> buffer, const std::uint64_
     }
 
     _handle.clear();
-    _handle.seekg(static_cast<std::streamoff>(offset), std::ios::beg);
+    _handle.seekg(utils::checked_narrow<std::streamoff>(offset, "seek offset"), std::ios::beg);
+    // std::istream accepts char buffers; conversion from std::byte storage is required here.
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     _handle.read(reinterpret_cast<char*>(buffer.data()),
-                 static_cast<std::streamsize>(buffer.size()));
+                 utils::checked_narrow<std::streamsize>(buffer.size(), "read_at size"));
 
     return static_cast<std::size_t>(_handle.gcount());
 }
@@ -127,7 +133,10 @@ std::size_t file_reader::read_line(std::span<std::byte> buffer)
         return 0;
     }
 
-    _handle.getline(reinterpret_cast<char*>(buffer.data()), buffer.size());
+    // std::istream accepts char buffers; conversion from std::byte storage is required here.
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    _handle.getline(reinterpret_cast<char*>(buffer.data()),
+                    utils::checked_narrow<std::streamsize>(buffer.size(), "read_line size"));
     return static_cast<std::size_t>(_handle.gcount());
 }
 
@@ -139,7 +148,7 @@ void file_reader::seek(std::uint64_t offset)
     }
 
     _handle.clear();
-    _handle.seekg(static_cast<std::streamoff>(offset), std::ios::beg);
+    _handle.seekg(utils::checked_narrow<std::streamoff>(offset, "seek offset"), std::ios::beg);
 }
 
 void file_reader::skip(std::size_t n)
@@ -150,6 +159,6 @@ void file_reader::skip(std::size_t n)
     }
 
     _handle.clear();
-    _handle.seekg(static_cast<std::streamoff>(n), std::ios::cur);
+    _handle.seekg(utils::checked_narrow<std::streamoff>(n, "skip length"), std::ios::cur);
 }
 } // namespace ripper::io::core

@@ -1,5 +1,7 @@
 #include "core/writer/file_writer.hpp"
 
+#include "core/util/numeric_cast.hpp"
+
 #include <cstddef>
 #include <filesystem>
 #include <ios>
@@ -61,8 +63,10 @@ std::size_t file_writer::write(std::span<const std::byte> buffer)
         return 0;
     }
 
+    // std::ostream accepts char buffers; conversion from std::byte storage is required here.
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     _handle.write(reinterpret_cast<const char*>(buffer.data()),
-                  static_cast<std::streamsize>(buffer.size()));
+                  utils::checked_narrow<std::streamsize>(buffer.size(), "write size"));
 
     return buffer.size();
 }
@@ -76,7 +80,7 @@ void file_writer::seek(std::uint64_t offset)
     }
 
     _handle.clear();
-    _handle.seekp(static_cast<std::streamoff>(offset), std::ios::beg);
+    _handle.seekp(utils::checked_narrow<std::streamoff>(offset, "seek offset"), std::ios::beg);
 }
 
 /// Flush buffered bytes to backing storage.

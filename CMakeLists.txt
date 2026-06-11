@@ -6,6 +6,7 @@ project(io_ripper_core
 )
 
 option(IO_RIPPER_CORE_BUILD_SHARED "Build io_ripper_core as a shared library" ON)
+option(IO_RIPPER_CORE_TIDY_INCLUDE_TESTS "Include tests in clang-tidy analysis" OFF)
 
 # Keep tests off by default when consumed via add_subdirectory/FetchContent.
 if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
@@ -46,7 +47,7 @@ set(IO_RIPPER_CORE_FORMAT_FILES
 )
 
 set(IO_RIPPER_CORE_TIDY_FILES ${IO_RIPPER_CORE_SOURCES})
-if(IO_RIPPER_CORE_ENABLE_TESTS)
+if(IO_RIPPER_CORE_ENABLE_TESTS AND IO_RIPPER_CORE_TIDY_INCLUDE_TESTS)
     list(APPEND IO_RIPPER_CORE_TIDY_FILES ${IO_RIPPER_CORE_TEST_FILES})
 endif()
 
@@ -111,6 +112,8 @@ add_library(io_ripper_core::io_ripper_core ALIAS io_ripper_core)
 target_compile_features(io_ripper_core PUBLIC cxx_std_23)
 
 target_include_directories(io_ripper_core
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
