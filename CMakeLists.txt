@@ -17,6 +17,7 @@ endif()
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if(IO_RIPPER_CORE_ENABLE_TESTS)
     include(CTest)
@@ -26,6 +27,74 @@ file(GLOB_RECURSE IO_RIPPER_CORE_SOURCES
     CONFIGURE_DEPENDS
     src/core/*.cpp
 )
+
+file(GLOB_RECURSE IO_RIPPER_CORE_HEADERS
+    CONFIGURE_DEPENDS
+    include/core/*.hpp
+)
+
+file(GLOB_RECURSE IO_RIPPER_CORE_TEST_FILES
+    CONFIGURE_DEPENDS
+    tests/*.cpp
+    tests/*.hpp
+)
+
+set(IO_RIPPER_CORE_FORMAT_FILES
+    ${IO_RIPPER_CORE_HEADERS}
+    ${IO_RIPPER_CORE_SOURCES}
+    ${IO_RIPPER_CORE_TEST_FILES}
+)
+
+set(IO_RIPPER_CORE_TIDY_FILES ${IO_RIPPER_CORE_SOURCES})
+if(IO_RIPPER_CORE_ENABLE_TESTS)
+    list(APPEND IO_RIPPER_CORE_TIDY_FILES ${IO_RIPPER_CORE_TEST_FILES})
+endif()
+
+find_program(IO_RIPPER_CORE_CLANG_FORMAT_BIN NAMES clang-format)
+if(IO_RIPPER_CORE_CLANG_FORMAT_BIN)
+    add_custom_target(format
+        COMMAND ${IO_RIPPER_CORE_CLANG_FORMAT_BIN} -i ${IO_RIPPER_CORE_FORMAT_FILES}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Formatting source files with clang-format"
+        VERBATIM
+    )
+
+    add_custom_target(format-check
+        COMMAND ${IO_RIPPER_CORE_CLANG_FORMAT_BIN} --dry-run --Werror ${IO_RIPPER_CORE_FORMAT_FILES}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Checking source formatting with clang-format"
+        VERBATIM
+    )
+else()
+    message(STATUS "clang-format not found; 'format' and 'format-check' targets will fail until installed.")
+
+    add_custom_target(format
+        COMMAND ${CMAKE_COMMAND} -E echo "clang-format not found in PATH"
+        COMMAND ${CMAKE_COMMAND} -E false
+    )
+
+    add_custom_target(format-check
+        COMMAND ${CMAKE_COMMAND} -E echo "clang-format not found in PATH"
+        COMMAND ${CMAKE_COMMAND} -E false
+    )
+endif()
+
+find_program(IO_RIPPER_CORE_CLANG_TIDY_BIN NAMES clang-tidy)
+if(IO_RIPPER_CORE_CLANG_TIDY_BIN)
+    add_custom_target(tidy
+        COMMAND ${IO_RIPPER_CORE_CLANG_TIDY_BIN} -p ${CMAKE_BINARY_DIR} ${IO_RIPPER_CORE_TIDY_FILES}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Running clang-tidy static analysis"
+        VERBATIM
+    )
+else()
+    message(STATUS "clang-tidy not found; 'tidy' target will fail until installed.")
+
+    add_custom_target(tidy
+        COMMAND ${CMAKE_COMMAND} -E echo "clang-tidy not found in PATH"
+        COMMAND ${CMAKE_COMMAND} -E false
+    )
+endif()
 
 if(IO_RIPPER_CORE_BUILD_SHARED)
     set(IO_RIPPER_CORE_LIBRARY_TYPE SHARED)
