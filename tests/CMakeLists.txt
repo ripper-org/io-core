@@ -1,5 +1,6 @@
 add_executable(io_ripper_core_tests
-    file_io_tests.cpp
+    file_reader_tests.cpp
+    file_writer_tests.cpp
 )
 
 target_compile_features(io_ripper_core_tests PRIVATE cxx_std_23)
