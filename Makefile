@@ -35,6 +35,9 @@ build: configure
 test: build
 	$(CTEST) --test-dir $(BUILD_DIR) --output-on-failure
 
+lint: configure
+	$(CMAKE) --build $(BUILD_DIR) --target format
+
 format: configure
 	$(CMAKE) --build $(BUILD_DIR) --target format
 
