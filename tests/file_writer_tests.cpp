@@ -1,21 +1,21 @@
-#include <cstddef>
-#include <vector>
-
-#include <catch2/catch_test_macros.hpp>
-
 #include "core/reader/file_reader.hpp"
 #include "core/writer/file_writer.hpp"
 #include "test_fixture.hpp"
 
+#include <catch2/catch_test_macros.hpp>
+#include <cstddef>
+#include <vector>
+
 namespace
 {
-    struct file_writer_fixture
-    {
-        test_fixture::scoped_temp_file output{"io_ripper_core_writer_test.bin"};
-    };
-}
+struct file_writer_fixture
+{
+    test_fixture::scoped_temp_file output{"io_ripper_core_writer_test.bin"};
+};
+} // namespace
 
-TEST_CASE_METHOD(file_writer_fixture, "file_writer writes bytes to output file", "[io][file_writer]")
+TEST_CASE_METHOD(file_writer_fixture, "file_writer writes bytes to output file",
+                 "[io][file_writer]")
 {
     const std::vector<std::byte> payload = test_fixture::to_bytes("ripper-io-core");
 
@@ -41,7 +41,8 @@ TEST_CASE_METHOD(file_writer_fixture, "file_writer writes bytes to output file",
     }
 }
 
-TEST_CASE_METHOD(file_writer_fixture, "file_writer close prevents further writes", "[io][file_writer]")
+TEST_CASE_METHOD(file_writer_fixture, "file_writer close prevents further writes",
+                 "[io][file_writer]")
 {
     ripper::io::core::file_writer writer{output.path()};
     REQUIRE(writer.is_open());

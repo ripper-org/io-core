@@ -1,27 +1,27 @@
-#include <array>
-#include <cstddef>
-#include <vector>
-
-#include <catch2/catch_test_macros.hpp>
-
 #include "core/reader/file_reader.hpp"
 #include "core/writer/file_writer.hpp"
 #include "test_fixture.hpp"
 
+#include <array>
+#include <catch2/catch_test_macros.hpp>
+#include <cstddef>
+#include <vector>
+
 namespace
 {
-    struct file_reader_fixture
+struct file_reader_fixture
+{
+    file_reader_fixture()
     {
-        file_reader_fixture()
-        {
-            test_fixture::ensure_reader_fixture_file();
-        }
+        test_fixture::ensure_reader_fixture_file();
+    }
 
-        const std::filesystem::path path = test_fixture::shared_reader_fixture_path();
-    };
-}
+    const std::filesystem::path path = test_fixture::shared_reader_fixture_path();
+};
+} // namespace
 
-TEST_CASE_METHOD(file_reader_fixture, "file_reader reads entire fixture payload", "[io][file_reader]")
+TEST_CASE_METHOD(file_reader_fixture, "file_reader reads entire fixture payload",
+                 "[io][file_reader]")
 {
     ripper::io::core::file_reader reader{path};
     REQUIRE(reader.is_open());
@@ -34,7 +34,8 @@ TEST_CASE_METHOD(file_reader_fixture, "file_reader reads entire fixture payload"
     REQUIRE(test_fixture::to_string(buffer) == "0123456789");
 }
 
-TEST_CASE_METHOD(file_reader_fixture, "file_reader read_at returns expected window", "[io][file_reader]")
+TEST_CASE_METHOD(file_reader_fixture, "file_reader read_at returns expected window",
+                 "[io][file_reader]")
 {
     ripper::io::core::file_reader reader{path};
 
@@ -45,7 +46,8 @@ TEST_CASE_METHOD(file_reader_fixture, "file_reader read_at returns expected wind
     REQUIRE(test_fixture::to_string(slice) == "3456");
 }
 
-TEST_CASE_METHOD(file_reader_fixture, "file_reader seek and peek are consistent", "[io][file_reader]")
+TEST_CASE_METHOD(file_reader_fixture, "file_reader seek and peek are consistent",
+                 "[io][file_reader]")
 {
     ripper::io::core::file_reader reader{path};
 

@@ -1,12 +1,12 @@
 ---
 Language: Cpp
 BasedOnStyle: LLVM
-Standard: c++23
+Standard: Latest
 IndentWidth: 4
 TabWidth: 4
 UseTab: Never
 ColumnLimit: 100
-BreakBeforeBraces: Attach
+BreakBeforeBraces: Allman
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
