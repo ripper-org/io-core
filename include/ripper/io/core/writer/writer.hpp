@@ -1,10 +1,10 @@
 #pragma once
 
+#include "ripper/io/core/io_ripper_core_export.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <span>
-
-#include "ripper/io/core/io_ripper_core_export.h"
 
 namespace ripper::io::core
 {

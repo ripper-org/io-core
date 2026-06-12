@@ -5,7 +5,7 @@ project(io_ripper_core
     LANGUAGES CXX
 )
 
-option(IO_RIPPER_CORE_BUILD_SHARED "Build io_ripper_core as a shared library" ON)
+option(IO_RIPPER_CORE_BUILD_SHARED "Build io_ripper_core as a shared library" OFF)
 option(IO_RIPPER_CORE_TIDY_INCLUDE_TESTS "Include tests in clang-tidy analysis" OFF)
 
 # Keep tests off by default when consumed via add_subdirectory/FetchContent.

@@ -27,6 +27,7 @@ help:
 	@echo "Variables: BUILD_DIR, BUILD_TYPE, GENERATOR"
 
 configure:
+	@mkdir -p $(BUILD_DIR)
 	$(CMAKE) $(CMAKE_CONFIGURE_ARGS)
 
 build: configure
