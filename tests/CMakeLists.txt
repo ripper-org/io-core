@@ -1,6 +1,8 @@
 add_executable(io_ripper_core_tests
     file_reader_tests.cpp
     file_writer_tests.cpp
+    memory_reader_tests.cpp
+    memory_writer_tests.cpp
     numeric_cast_tests.cpp
 )
 
