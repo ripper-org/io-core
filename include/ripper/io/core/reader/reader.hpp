@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <span>
 
+#include "ripper/io/core/io_ripper_core_export.h"
+
 namespace ripper::io::core
 {
 /// Abstract byte-oriented input interface.
@@ -13,7 +15,7 @@ namespace ripper::io::core
 ///
 /// Implementations encapsulate storage-specific concerns such as stream
 /// state, buffering, and ownership.
-class reader
+class IO_RIPPER_CORE_API reader
 {
 public:
     virtual ~reader() = default;

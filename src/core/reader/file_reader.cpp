@@ -1,4 +1,4 @@
-#include "core/reader/file_reader.hpp"
+#include "ripper/io/core/reader/file_reader.hpp"
 
 #include "core/util/numeric_cast.hpp"
 

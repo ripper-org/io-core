@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <span>
 
+#include "ripper/io/core/io_ripper_core_export.h"
+
 namespace ripper::io::core
 {
 /// Abstract byte-oriented output interface.
@@ -14,7 +16,7 @@ namespace ripper::io::core
 ///
 /// Implementations encapsulate storage-specific concerns such as buffering,
 /// stream state, and resource ownership.
-class writer
+class IO_RIPPER_CORE_API writer
 {
 public:
     virtual ~writer() = default;

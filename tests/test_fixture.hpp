@@ -69,6 +69,12 @@ public:
         fs::remove(path_);
     }
 
+    scoped_temp_file(const scoped_temp_file&) = delete;
+    scoped_temp_file& operator=(const scoped_temp_file&) = delete;
+
+    scoped_temp_file(scoped_temp_file&&) noexcept = default;
+    scoped_temp_file& operator=(scoped_temp_file&&) noexcept = default;
+
     const fs::path& path() const
     {
         return path_;

@@ -31,7 +31,7 @@ file(GLOB_RECURSE IO_RIPPER_CORE_SOURCES
 
 file(GLOB_RECURSE IO_RIPPER_CORE_HEADERS
     CONFIGURE_DEPENDS
-    include/core/*.hpp
+    include/**/*.hpp
 )
 
 file(GLOB_RECURSE IO_RIPPER_CORE_TEST_FILES
@@ -109,12 +109,20 @@ add_library(io_ripper_core ${IO_RIPPER_CORE_LIBRARY_TYPE}
 
 add_library(io_ripper_core::io_ripper_core ALIAS io_ripper_core)
 
+include(GenerateExportHeader)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/ripper/io/core)
+generate_export_header(io_ripper_core
+    EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/include/ripper/io/core/io_ripper_core_export.h
+    EXPORT_MACRO_NAME IO_RIPPER_CORE_API
+)
+
 target_compile_features(io_ripper_core PUBLIC cxx_std_23)
 
 target_include_directories(io_ripper_core
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
     PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
 )
@@ -123,6 +131,8 @@ set_target_properties(io_ripper_core PROPERTIES
     OUTPUT_NAME io_ripper_core
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN YES
 )
 
 include(GNUInstallDirs)
@@ -138,6 +148,11 @@ install(TARGETS io_ripper_core
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/include/ripper/io/core/io_ripper_core_export.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ripper/io/core
 )
 
 install(EXPORT io_ripper_coreTargets

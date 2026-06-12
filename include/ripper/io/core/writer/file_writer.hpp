@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/writer/writer.hpp"
+#include "ripper/io/core/writer/writer.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -19,7 +19,7 @@ namespace ripper::io::core
 ///
 /// The file is opened in binary mode and truncated on construction.
 /// This class is move-enabled and non-copyable.
-class file_writer : public writer
+class IO_RIPPER_CORE_API file_writer : public writer
 {
 public:
     /// Create and open a file writer for `path`.

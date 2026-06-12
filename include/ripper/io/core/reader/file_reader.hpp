@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/reader/reader.hpp"
+#include "ripper/io/core/reader/reader.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -19,7 +19,7 @@ namespace ripper::io::core
 ///
 /// The file is opened in binary mode during construction.
 /// This class is move-enabled and non-copyable.
-class file_reader : public reader
+class IO_RIPPER_CORE_API file_reader : public reader
 {
 public:
     /// Create and open a file reader for `path`.

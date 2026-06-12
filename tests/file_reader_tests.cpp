@@ -1,5 +1,5 @@
-#include "core/reader/file_reader.hpp"
-#include "core/writer/file_writer.hpp"
+#include "ripper/io/core/reader/file_reader.hpp"
+#include "ripper/io/core/writer/file_writer.hpp"
 #include "test_fixture.hpp"
 
 #include <array>
