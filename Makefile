@@ -5,13 +5,17 @@ CTEST ?= ctest
 BUILD_DIR ?= build
 BUILD_TYPE ?= Debug
 GENERATOR ?=
+DEPS_DIR ?= .deps
+FORMAT_TARGET ?= io_ripper_core_format
+FORMAT_CHECK_TARGET ?= io_ripper_core_format_check
+TIDY_TARGET ?= io_ripper_core_tidy
 
 CMAKE_CONFIGURE_ARGS := -S . -B $(BUILD_DIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE)
 ifneq ($(strip $(GENERATOR)),)
 CMAKE_CONFIGURE_ARGS += -G "$(GENERATOR)"
 endif
 
-.PHONY: help configure build test format format-check tidy clean rebuild install
+.PHONY: help configure build test format format-check tidy clean rebuild install depclean
 
 help:
 	@echo "Available targets:"
@@ -22,9 +26,10 @@ help:
 	@echo "  make format-check - Verify clang-format compliance"
 	@echo "  make tidy         - Run clang-tidy static analysis"
 	@echo "  make install      - Install from $(BUILD_DIR)"
-	@echo "  make clean        - Remove $(BUILD_DIR)"
+	@echo "  make clean        - Remove $(BUILD_DIR) and $(DEPS_DIR)"
 	@echo "  make rebuild      - Clean then build"
-	@echo "Variables: BUILD_DIR, BUILD_TYPE, GENERATOR"
+	@echo "  make depclean     - Remove $(DEPS_DIR) only"
+	@echo "Variables: BUILD_DIR, BUILD_TYPE, GENERATOR, DEPS_DIR, FORMAT_TARGET, FORMAT_CHECK_TARGET, TIDY_TARGET"
 
 configure:
 	@mkdir -p $(BUILD_DIR)
@@ -37,21 +42,25 @@ test: build
 	$(CTEST) --test-dir $(BUILD_DIR) --output-on-failure
 
 lint: configure
-	$(CMAKE) --build $(BUILD_DIR) --target format
+	$(CMAKE) --build $(BUILD_DIR) --target $(FORMAT_TARGET)
 
 format: configure
-	$(CMAKE) --build $(BUILD_DIR) --target format
+	$(CMAKE) --build $(BUILD_DIR) --target $(FORMAT_TARGET)
 
 format-check: configure
-	$(CMAKE) --build $(BUILD_DIR) --target format-check
+	$(CMAKE) --build $(BUILD_DIR) --target $(FORMAT_CHECK_TARGET)
 
 tidy: configure
-	$(CMAKE) --build $(BUILD_DIR) --target tidy
+	$(CMAKE) --build $(BUILD_DIR) --target $(TIDY_TARGET)
 
 install: build
 	$(CMAKE) --install $(BUILD_DIR)
 
 clean:
-	$(CMAKE) -E rm -rf $(BUILD_DIR)
+	$(CMAKE) -E rm -rf $(BUILD_DIR) $(DEPS_DIR)
+
+depclean:
+	@echo "Removing $(DEPS_DIR)..."
+	$(CMAKE) -E rm -rf $(DEPS_DIR)
 
 rebuild: clean build

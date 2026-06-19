@@ -1,29 +1,46 @@
 cmake_minimum_required(VERSION 3.20)
 
+# ------------------------------------------------------------------------------
+# Project configuration
+# ------------------------------------------------------------------------------
 project(io_ripper_core
     VERSION 0.1.0
     LANGUAGES CXX
 )
 
+# ------------------------------------------------------------------------------
+# Language standard
+# ------------------------------------------------------------------------------
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# ------------------------------------------------------------------------------
+# Build parameters
+# ------------------------------------------------------------------------------
 option(IO_RIPPER_CORE_BUILD_SHARED "Build io_ripper_core as a shared library" OFF)
 option(IO_RIPPER_CORE_TIDY_INCLUDE_TESTS "Include tests in clang-tidy analysis" OFF)
 
-# Keep tests off by default when consumed via add_subdirectory/FetchContent.
 if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     option(IO_RIPPER_CORE_ENABLE_TESTS "Build io_ripper_core tests" ON)
 else()
     option(IO_RIPPER_CORE_ENABLE_TESTS "Build io_ripper_core tests" OFF)
 endif()
 
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 if(IO_RIPPER_CORE_ENABLE_TESTS)
     include(CTest)
 endif()
 
+# ------------------------------------------------------------------------------
+# Dependencies
+# ------------------------------------------------------------------------------
+set(FETCHCONTENT_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/.deps CACHE PATH
+    "Persistent directory for FetchContent downloads (survives make clean of build/)")
+
+# ------------------------------------------------------------------------------
+# Library sources
+# ------------------------------------------------------------------------------
 file(GLOB_RECURSE IO_RIPPER_CORE_SOURCES
     CONFIGURE_DEPENDS
     src/core/*.cpp
@@ -53,28 +70,28 @@ endif()
 
 find_program(IO_RIPPER_CORE_CLANG_FORMAT_BIN NAMES clang-format)
 if(IO_RIPPER_CORE_CLANG_FORMAT_BIN)
-    add_custom_target(format
+    add_custom_target(io_ripper_core_format
         COMMAND ${IO_RIPPER_CORE_CLANG_FORMAT_BIN} -i ${IO_RIPPER_CORE_FORMAT_FILES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMENT "Formatting source files with clang-format"
+        COMMENT "Formatting io-core source files with clang-format"
         VERBATIM
     )
 
-    add_custom_target(format-check
+    add_custom_target(io_ripper_core_format_check
         COMMAND ${IO_RIPPER_CORE_CLANG_FORMAT_BIN} --dry-run --Werror ${IO_RIPPER_CORE_FORMAT_FILES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMENT "Checking source formatting with clang-format"
+        COMMENT "Checking io-core source formatting with clang-format"
         VERBATIM
     )
 else()
-    message(STATUS "clang-format not found; 'format' and 'format-check' targets will fail until installed.")
+    message(STATUS "clang-format not found; 'io_ripper_core_format' and 'io_ripper_core_format_check' targets will fail until installed.")
 
-    add_custom_target(format
+    add_custom_target(io_ripper_core_format
         COMMAND ${CMAKE_COMMAND} -E echo "clang-format not found in PATH"
         COMMAND ${CMAKE_COMMAND} -E false
     )
 
-    add_custom_target(format-check
+    add_custom_target(io_ripper_core_format_check
         COMMAND ${CMAKE_COMMAND} -E echo "clang-format not found in PATH"
         COMMAND ${CMAKE_COMMAND} -E false
     )
@@ -82,21 +99,24 @@ endif()
 
 find_program(IO_RIPPER_CORE_CLANG_TIDY_BIN NAMES clang-tidy)
 if(IO_RIPPER_CORE_CLANG_TIDY_BIN)
-    add_custom_target(tidy
+    add_custom_target(io_ripper_core_tidy
         COMMAND ${IO_RIPPER_CORE_CLANG_TIDY_BIN} -p ${CMAKE_BINARY_DIR} ${IO_RIPPER_CORE_TIDY_FILES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMENT "Running clang-tidy static analysis"
+        COMMENT "Running io-core clang-tidy static analysis"
         VERBATIM
     )
 else()
-    message(STATUS "clang-tidy not found; 'tidy' target will fail until installed.")
+    message(STATUS "clang-tidy not found; 'io_ripper_core_tidy' target will fail until installed.")
 
-    add_custom_target(tidy
+    add_custom_target(io_ripper_core_tidy
         COMMAND ${CMAKE_COMMAND} -E echo "clang-tidy not found in PATH"
         COMMAND ${CMAKE_COMMAND} -E false
     )
 endif()
 
+# ------------------------------------------------------------------------------
+# Library target
+# ------------------------------------------------------------------------------
 if(IO_RIPPER_CORE_BUILD_SHARED)
     set(IO_RIPPER_CORE_LIBRARY_TYPE SHARED)
 else()
@@ -109,23 +129,7 @@ add_library(io_ripper_core ${IO_RIPPER_CORE_LIBRARY_TYPE}
 
 add_library(io_ripper_core::io_ripper_core ALIAS io_ripper_core)
 
-include(GenerateExportHeader)
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/ripper/io/core)
-generate_export_header(io_ripper_core
-    EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/include/ripper/io/core/io_ripper_core_export.h
-    EXPORT_MACRO_NAME IO_RIPPER_CORE_API
-)
-
 target_compile_features(io_ripper_core PUBLIC cxx_std_23)
-
-target_include_directories(io_ripper_core
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-    PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>
-)
 
 set_target_properties(io_ripper_core PROPERTIES
     OUTPUT_NAME io_ripper_core
@@ -135,6 +139,31 @@ set_target_properties(io_ripper_core PROPERTIES
     VISIBILITY_INLINES_HIDDEN YES
 )
 
+# ------------------------------------------------------------------------------
+# Export header (for future shared library support)
+# ------------------------------------------------------------------------------
+include(GenerateExportHeader)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/ripper/io/core)
+generate_export_header(io_ripper_core
+    EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/include/ripper/io/core/io_ripper_core_export.h
+    EXPORT_MACRO_NAME IO_RIPPER_CORE_API
+)
+
+# ------------------------------------------------------------------------------
+# Include directories
+# ------------------------------------------------------------------------------
+target_include_directories(io_ripper_core
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+# ------------------------------------------------------------------------------
+# Install rules
+# ------------------------------------------------------------------------------
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
@@ -179,16 +208,22 @@ install(FILES
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/io_ripper_core
 )
 
+# ------------------------------------------------------------------------------
+# Tests
+# ------------------------------------------------------------------------------
 if(IO_RIPPER_CORE_ENABLE_TESTS)
     include(FetchContent)
 
-    FetchContent_Declare(
-        Catch2
-        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-        GIT_TAG v3.7.1
-    )
-
-    FetchContent_MakeAvailable(Catch2)
+    if(NOT TARGET Catch2::Catch2)
+        if(NOT Catch2_POPULATED)
+            FetchContent_Declare(
+                Catch2
+                GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+                GIT_TAG v3.7.1
+            )
+        endif()
+        FetchContent_MakeAvailable(Catch2)
+    endif()
 
     set(BUILD_TESTING ON CACHE BOOL "Enable testing" FORCE)
     add_subdirectory(tests)
