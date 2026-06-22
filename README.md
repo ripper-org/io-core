@@ -1,54 +1,35 @@
 # Ripper IO Core
 
-A modular C++23 library providing consistent interfaces for various I/O operations. All Ripper libraries depend on this library for I/O functionality.
+**Platform-independent I/O abstractions for the Ripper ecosystem.**
 
-## Build
+io-core provides a uniform interface for reading and writing data across
+different backends — files, memory buffers, and beyond. It is the foundational
+I/O layer for all Ripper libraries, designed with modularity and
+single-responsibility in mind.
 
-```bash
-make build
-```
+## Use cases
 
-## Run tests
+- Swap between file and memory I/O without changing application logic
+- Build tools that read structured data from files and write results to memory
+  (or vice versa)
+- Write test suites that operate entirely in memory, avoiding filesystem noise
+- Serve as a portable I/O backend for higher-level format libraries (PDF,
+  images, archives, etc.)
 
-```bash
-make test
-```
+## Documentation
 
-## Install
+- [User guide](docs/USAGE.md) — building, installing, and CMake integration
+- [Contributor guide](docs/CONTRIBUTING.md) — building from source, running
+  tests, formatting, and static analysis
 
-```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
-cmake --install build --prefix /your/install/prefix
-```
+## License
 
-## Use from another CMake project (installed package)
+This library is distributed under the **MIT License**. You are free to use,
+modify, and distribute it in any project, proprietary or open-source. See
+[LICENSE](LICENSE) for the full text.
 
-```cmake
-find_package(io_ripper_core REQUIRED)
+## Contact
 
-add_executable(my_app main.cpp)
-target_link_libraries(my_app PRIVATE io_ripper_core::io_ripper_core)
-```
-
-## Use with FetchContent
-
-```cmake
-include(FetchContent)
-
-FetchContent_Declare(
-	io_ripper_core
-	GIT_REPOSITORY https://github.com/ripper-org/io-core
-	GIT_TAG main
-)
-
-FetchContent_MakeAvailable(io_ripper_core)
-
-add_executable(my_app main.cpp)
-target_link_libraries(my_app PRIVATE io_ripper_core::io_ripper_core)
-```
-
-### CMake options
-
-- `IO_RIPPER_CORE_BUILD_SHARED`: `ON` to build shared library, `OFF` for static.
-- `IO_RIPPER_CORE_ENABLE_TESTS`: builds test suite (`ON` by default when this is the top-level project, `OFF` when consumed via FetchContent/add_subdirectory).
+If this library fits your use case, or if you have ideas for features or
+improvements, we would love to hear from you. Open an issue or start a
+discussion on the [GitHub repository](https://github.com/ripper-org/io-core).
