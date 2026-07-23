@@ -1,5 +1,8 @@
 # Ripper IO Core
 
+> [!WARNING]
+> **Work in progress** — This library is under active development and not yet production-ready. APIs may change until v1.0.
+
 **Platform-independent I/O abstractions for the Ripper ecosystem.**
 
 io-core provides a uniform interface for reading and writing data across
