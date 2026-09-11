@@ -29,7 +29,7 @@ std::size_t memory_writer::tell()
     return _position;
 }
 
-std::size_t memory_writer::write(std::span<const std::byte> buffer)
+void memory_writer::write(std::span<const std::byte> buffer)
 {
     if (!_is_open)
     {
@@ -38,7 +38,7 @@ std::size_t memory_writer::write(std::span<const std::byte> buffer)
 
     if (buffer.empty())
     {
-        return 0;
+        return;
     }
 
     const std::size_t requested_end = _position + buffer.size();
@@ -49,10 +49,8 @@ std::size_t memory_writer::write(std::span<const std::byte> buffer)
     }
 
     std::ranges::copy(buffer, _buffer_ptr->begin() + utils::checked_narrow<std::ptrdiff_t>(
-                                                         _position, "write position"));
+                                                     _position, "write position"));
     _position = requested_end;
-
-    return buffer.size();
 }
 
 void memory_writer::seek(const std::uint64_t offset)

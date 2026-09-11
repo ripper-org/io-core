@@ -49,9 +49,8 @@ std::string_view file_writer::get_path() const
 
 /// Write bytes from `buffer` to the current stream position.
 ///
-/// Returns 0 only for an empty input buffer.
 /// Throws when the stream is closed or the underlying write fails.
-std::size_t file_writer::write(std::span<const std::byte> buffer)
+void file_writer::write(std::span<const std::byte> buffer)
 {
     if (!is_open())
     {
@@ -60,15 +59,13 @@ std::size_t file_writer::write(std::span<const std::byte> buffer)
 
     if (buffer.empty())
     {
-        return 0;
+        return;
     }
 
     // std::ostream accepts char buffers; conversion from std::byte storage is required here.
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     _handle.write(reinterpret_cast<const char*>(buffer.data()),
                   utils::checked_narrow<std::streamsize>(buffer.size(), "write size"));
-
-    return buffer.size();
 }
 
 /// Set the write position to `offset` from stream start.

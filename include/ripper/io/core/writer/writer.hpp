@@ -19,8 +19,8 @@ namespace ripper::io::core
 ///
 /// Contract baseline for all implementations:
 /// - A writer exposes a single logical cursor (`tell`, `seek`).
-/// - `write` emits bytes at current cursor and advances by returned count.
-/// - Empty source buffers are valid and should return 0 without side effects.
+/// - `write` emits bytes at the current cursor and advances by `buffer.size()`.
+/// - Empty source buffers are valid no-ops.
 /// - `close` transitions the writer to a closed state; operation validity after
 ///   close is implementation-defined and must be documented by concrete types.
 ///
@@ -46,23 +46,21 @@ public:
     /// @throws implementation-defined exception on invalid or unavailable state.
     [[nodiscard]] virtual std::size_t tell() = 0;
 
-    /// Write bytes from `buffer` at the current stream position.
+    /// Write all bytes from `buffer` at the current stream position.
     ///
     /// Preconditions:
     /// - Writer is in a valid writable state.
     ///
     /// Postconditions:
-    /// - Cursor advances by returned byte count.
-    /// - Returns 0 for `buffer.empty()`.
-    /// - Returned count is in `[0, buffer.size()]`.
+    /// - Cursor advances by `buffer.size()`.
+    /// - `buffer.empty()` is a valid no-op.
+    /// - Either all bytes are written, or the call fails.
     ///
-    /// Implementations may perform partial writes where backend constraints
-    /// apply; concrete classes must document whether short writes are expected.
+    /// Implementations are responsible for handling backend constraints such as
+    /// partial writes or blocking internally; callers must not observe them.
     ///
     /// @throws implementation-defined exception on write failures.
-    ///
-    /// @return Number of bytes written.
-    [[nodiscard]] virtual std::size_t write(std::span<const std::byte> buffer) = 0;
+    virtual void write(std::span<const std::byte> buffer) = 0;
 
     /// Move the write position to `offset` from stream start.
     ///

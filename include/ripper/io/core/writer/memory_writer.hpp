@@ -67,21 +67,19 @@ public:
     /// Return current logical write position.
     [[nodiscard]] std::size_t tell() override;
 
-    /// Write `buffer` at current logical position.
+    /// Write all of `buffer` at current logical position.
     ///
     /// Preconditions:
     /// - `is_open() == true`.
     ///
     /// Postconditions:
-    /// - Returns 0 when `buffer.empty()`.
+    /// - `buffer.empty()` is a valid no-op.
     /// - Vector grows as needed so all bytes are written.
-    /// - Advances `tell()` by returned byte count.
+    /// - Advances `tell()` by `buffer.size()`.
     ///
     /// @throws std::runtime_error when writer is closed.
     /// @throws std::bad_alloc on allocation failure in vector-backed mode.
-    ///
-    /// @return Number of bytes written.
-    [[nodiscard]] std::size_t write(std::span<const std::byte> buffer) override;
+    void write(std::span<const std::byte> buffer) override;
 
     /// Set logical write position to `offset`.
     ///

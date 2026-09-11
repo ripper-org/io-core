@@ -60,20 +60,18 @@ public:
     /// @throws std::runtime_error if the stream position cannot be queried.
     [[nodiscard]] std::size_t tell() override;
 
-    /// Write bytes from `buffer` at the current stream offset.
+    /// Write all bytes from `buffer` at the current stream offset.
     ///
     /// Preconditions:
     /// - `is_open() == true`.
     ///
     /// Postconditions (on success):
-    /// - Stream position advances by returned byte count.
-    /// - Returns 0 when `buffer.empty()`.
+    /// - Stream position advances by `buffer.size()`.
+    /// - `buffer.empty()` is a valid no-op.
     ///
     /// @throws std::runtime_error when the writer is closed.
     /// @throws std::ios_base::failure on stream write failures.
-    ///
-    /// @return Number of bytes written to the stream.
-    [[nodiscard]] std::size_t write(std::span<const std::byte> buffer) override;
+    void write(std::span<const std::byte> buffer) override;
 
     /// Seek to an absolute stream offset.
     ///

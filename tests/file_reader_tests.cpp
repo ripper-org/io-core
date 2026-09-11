@@ -158,7 +158,7 @@ TEST_CASE_METHOD(file_reader_fixture, "file_reader read_line reads up to newline
     {
         ripper::io::core::file_writer writer{tmp.path()};
         const auto payload = test_fixture::to_bytes("hello\nworld");
-        std::ignore = writer.write(payload);
+        writer.write(payload);
         writer.flush();
     }
 
@@ -187,7 +187,7 @@ TEST_CASE("file_reader operations on moved-from instance throw", "[io][file_read
 
     {
         ripper::io::core::file_writer w{tmp.path()};
-        std::ignore = w.write(test_fixture::to_bytes("hello"));
+        w.write(test_fixture::to_bytes("hello"));
         w.flush();
     }
 
