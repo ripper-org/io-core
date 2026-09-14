@@ -49,7 +49,7 @@ void memory_writer::write(std::span<const std::byte> buffer)
     }
 
     std::ranges::copy(buffer, _buffer_ptr->begin() + utils::checked_narrow<std::ptrdiff_t>(
-                                                     _position, "write position"));
+                                                         _position, "write position"));
     _position = requested_end;
 }
 
