@@ -16,7 +16,7 @@ namespace ripper::io::core
 /// The target is opened in binary output mode with truncation.
 /// Throws if the file cannot be opened.
 file_writer::file_writer(std::filesystem::path path)
-    : _path{std::move(path)}, _canonicalPath{std::filesystem::absolute(_path).string()}, _handle{}
+    : _path{std::move(path)}, _absolutePath{std::filesystem::absolute(_path).string()}, _handle{}
 {
     _handle.exceptions(std::ios::badbit | std::ios::failbit);
     _handle.open(_path, std::ios::binary | std::ios::out | std::ios::trunc);
@@ -38,13 +38,15 @@ std::size_t file_writer::tell()
         throw std::runtime_error{"Unable to read current write position for: " + _path.string()};
     }
 
-    return static_cast<std::size_t>(currentPos);
+    const std::streamoff currentOffset = static_cast<std::streamoff>(currentPos);
+
+    return utils::checked_narrow<std::size_t>(currentOffset, "tell position");
 }
 
-/// Return the canonical absolute file path.
+/// Return the absolute file path.
 std::string_view file_writer::get_path() const
 {
-    return _canonicalPath;
+    return _absolutePath;
 }
 
 /// Write bytes from `buffer` to the current stream position.

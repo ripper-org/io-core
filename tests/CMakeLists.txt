@@ -4,6 +4,7 @@ add_executable(io_ripper_core_tests
     memory_reader_tests.cpp
     memory_writer_tests.cpp
     numeric_cast_tests.cpp
+    reader_parity_tests.cpp
 )
 
 target_compile_features(io_ripper_core_tests PRIVATE cxx_std_23)

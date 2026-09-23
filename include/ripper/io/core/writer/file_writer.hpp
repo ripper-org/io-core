@@ -24,7 +24,9 @@ namespace ripper::io::core
 /// - Data passed to `write` is copied into the stream immediately.
 /// - After move, the moved-from instance is not usable for output operations.
 ///
-/// This class is move-enabled and non-copyable.
+/// Backend behavior:
+/// - Seeking beyond the current end of the file is permitted and produces a
+///   sparse region; bytes written there are placed at the target offset.
 class IO_RIPPER_CORE_API file_writer : public writer
 {
 public:
@@ -104,14 +106,14 @@ public:
     /// - Subsequent `write`, `seek`, or `flush` calls throw.
     void close() override;
 
-    /// Return the canonical absolute path for the backing file.
+    /// Return the absolute path for the backing file.
     ///
     /// Returned view is valid for the lifetime of this object.
     [[nodiscard]] std::string_view get_path() const;
 
 private:
     std::filesystem::path _path;
-    std::string _canonicalPath;
+    std::string _absolutePath;
     std::ofstream _handle;
 };
 } // namespace ripper::io::core

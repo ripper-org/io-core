@@ -4,6 +4,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>
+#include <limits>
 #include <span>
 #include <vector>
 
@@ -155,4 +156,52 @@ TEST_CASE("memory_writer null pointer constructor throws", "[io][memory_writer]"
 {
     std::vector<std::byte>* output = nullptr;
     REQUIRE_THROWS(ripper::io::core::memory_writer{output});
+}
+
+TEST_CASE("memory_writer move constructor detaches source", "[io][memory_writer]")
+{
+    std::vector<std::byte> output;
+    ripper::io::core::memory_writer writer{output};
+    writer.write(test_fixture::to_bytes("abc"));
+
+    ripper::io::core::memory_writer moved{std::move(writer)};
+
+    REQUIRE_FALSE(writer.is_open());
+    REQUIRE(moved.is_open());
+    REQUIRE(moved.tell() == 3);
+
+    const auto data = test_fixture::to_bytes("def");
+    REQUIRE_THROWS(writer.write(data)); // NOLINT(bugprone-use-after-move)
+
+    moved.write(data);
+    REQUIRE(test_fixture::to_string(output) == "abcdef");
+}
+
+TEST_CASE("memory_writer move assignment detaches source", "[io][memory_writer]")
+{
+    std::vector<std::byte> output_a;
+    std::vector<std::byte> output_b;
+
+    ripper::io::core::memory_writer a{output_a};
+    a.write(test_fixture::to_bytes("x"));
+
+    ripper::io::core::memory_writer b{output_b};
+    b = std::move(a);
+
+    REQUIRE_FALSE(a.is_open()); // NOLINT(bugprone-use-after-move)
+    REQUIRE(b.is_open());
+
+    b.write(test_fixture::to_bytes("y"));
+    REQUIRE(test_fixture::to_string(output_a) == "xy"); // b now targets a's buffer
+    REQUIRE(output_b.empty());
+}
+
+TEST_CASE("memory_writer write at maximum position overflows", "[io][memory_writer]")
+{
+    std::vector<std::byte> output;
+    ripper::io::core::memory_writer writer{output};
+
+    writer.seek(std::numeric_limits<std::size_t>::max());
+
+    REQUIRE_THROWS_AS(writer.write(test_fixture::to_bytes("x")), std::overflow_error);
 }

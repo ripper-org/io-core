@@ -6,18 +6,19 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>
 #include <filesystem>
+#include <span>
 #include <vector>
 
 namespace
 {
 struct file_reader_fixture
 {
-    file_reader_fixture()
+    file_reader_fixture() : path{test_fixture::shared_reader_fixture_path()}
     {
-        test_fixture::ensure_reader_fixture_file();
+        test_fixture::ensure_reader_fixture_file(path);
     }
 
-    const std::filesystem::path path = test_fixture::shared_reader_fixture_path();
+    const std::filesystem::path path;
 };
 } // namespace
 
@@ -59,6 +60,21 @@ TEST_CASE_METHOD(file_reader_fixture, "file_reader seek and peek are consistent"
     reader.seek(5);
     REQUIRE(reader.tell() == 5);
     REQUIRE(static_cast<char>(reader.peek()) == '5');
+    REQUIRE(reader.tell() == 5); // peek must not advance
+}
+
+TEST_CASE_METHOD(file_reader_fixture, "file_reader seek and skip clamp at end", "[io][file_reader]")
+{
+    ripper::io::core::file_reader reader{path};
+
+    reader.seek(100);
+    REQUIRE(reader.tell() == 10);
+    REQUIRE(reader.eof());
+
+    reader.seek(0);
+    reader.skip(100);
+    REQUIRE(reader.tell() == 10);
+    REQUIRE(reader.eof());
 }
 
 // ---------------------------------------------------------------------------
@@ -80,6 +96,18 @@ TEST_CASE_METHOD(file_reader_fixture, "file_reader read_at with empty span retur
     ripper::io::core::file_reader reader{path};
     std::span<std::byte> empty{};
     REQUIRE(reader.read_at(empty, 5) == 0);
+    REQUIRE(reader.tell() == 0); // position unchanged
+}
+
+TEST_CASE_METHOD(file_reader_fixture, "file_reader read_at beyond end returns 0",
+                 "[io][file_reader]")
+{
+    ripper::io::core::file_reader reader{path};
+
+    std::array<std::byte, 4> slice{};
+    REQUIRE(reader.read_at(slice, 10) == 0);
+    REQUIRE(reader.read_at(slice, 100) == 0);
+    REQUIRE(reader.tell() == 0); // position unchanged
 }
 
 TEST_CASE_METHOD(file_reader_fixture, "file_reader skip advances position", "[io][file_reader]")
@@ -101,7 +129,8 @@ TEST_CASE_METHOD(file_reader_fixture, "file_reader eof is true after reading all
     std::vector<std::byte> buffer(10);
     std::ignore = reader.read(buffer);
 
-    // Trigger eof state by attempting one more byte read
+    REQUIRE(reader.eof());
+
     std::array<std::byte, 1> extra{};
     std::ignore = reader.read(extra);
 
@@ -122,7 +151,7 @@ TEST_CASE_METHOD(file_reader_fixture, "file_reader read past EOF returns fewer b
     REQUIRE(test_fixture::to_string(std::span{buffer}.subspan(0, 2)) == "89");
 }
 
-TEST_CASE_METHOD(file_reader_fixture, "file_reader read_at leaves stream position after window",
+TEST_CASE_METHOD(file_reader_fixture, "file_reader read_at leaves stream position unchanged",
                  "[io][file_reader]")
 {
     ripper::io::core::file_reader reader{path};
@@ -130,7 +159,8 @@ TEST_CASE_METHOD(file_reader_fixture, "file_reader read_at leaves stream positio
     std::array<std::byte, 3> slice{};
     std::ignore = reader.read_at(slice, 2); // reads bytes [2,3,4]
 
-    REQUIRE(reader.tell() == 5); // seeked to 2, read 3 → position is 5
+    REQUIRE(test_fixture::to_string(slice) == "234");
+    REQUIRE(reader.tell() == 0); // read_at must not move the cursor
 }
 
 TEST_CASE_METHOD(file_reader_fixture, "file_reader seek to beginning resets position",
@@ -150,8 +180,11 @@ TEST_CASE_METHOD(file_reader_fixture, "file_reader seek to beginning resets posi
     REQUIRE(test_fixture::to_string(buf1) == test_fixture::to_string(buf2));
 }
 
-TEST_CASE_METHOD(file_reader_fixture, "file_reader read_line reads up to newline",
-                 "[io][file_reader]")
+// ---------------------------------------------------------------------------
+// read_line
+// ---------------------------------------------------------------------------
+
+TEST_CASE("file_reader read_line reads up to newline", "[io][file_reader]")
 {
     test_fixture::scoped_temp_file tmp{"io_ripper_core_readline_test.bin"};
 
@@ -164,11 +197,125 @@ TEST_CASE_METHOD(file_reader_fixture, "file_reader read_line reads up to newline
 
     ripper::io::core::file_reader reader{tmp.path()};
     std::array<std::byte, 32> buf{};
+
     const std::size_t n = reader.read_line(buf);
 
-    // gcount includes the delimiter that was consumed but not stored
-    REQUIRE(n >= 5);
+    REQUIRE(n == 5);
     REQUIRE(test_fixture::to_string(std::span{buf}.subspan(0, 5)) == "hello");
+    REQUIRE(reader.tell() == 6); // includes consumed delimiter
+}
+
+TEST_CASE("file_reader read_line handles CR line ending", "[io][file_reader]")
+{
+    test_fixture::scoped_temp_file tmp{"io_ripper_core_readline_cr.bin"};
+
+    {
+        ripper::io::core::file_writer writer{tmp.path()};
+        writer.write(test_fixture::to_bytes("alpha\rbeta"));
+        writer.flush();
+    }
+
+    ripper::io::core::file_reader reader{tmp.path()};
+    std::array<std::byte, 32> buf{};
+
+    REQUIRE(reader.read_line(buf) == 5);
+    REQUIRE(test_fixture::to_string(std::span{buf}.subspan(0, 5)) == "alpha");
+    REQUIRE(reader.tell() == 6);
+
+    REQUIRE(reader.read_line(buf) == 4);
+    REQUIRE(test_fixture::to_string(std::span{buf}.subspan(0, 4)) == "beta");
+    REQUIRE(reader.tell() == 10);
+}
+
+TEST_CASE("file_reader read_line handles CRLF line ending", "[io][file_reader]")
+{
+    test_fixture::scoped_temp_file tmp{"io_ripper_core_readline_crlf.bin"};
+
+    {
+        ripper::io::core::file_writer writer{tmp.path()};
+        writer.write(test_fixture::to_bytes("alpha\r\nbeta"));
+        writer.flush();
+    }
+
+    ripper::io::core::file_reader reader{tmp.path()};
+    std::array<std::byte, 32> buf{};
+
+    REQUIRE(reader.read_line(buf) == 5);
+    REQUIRE(test_fixture::to_string(std::span{buf}.subspan(0, 5)) == "alpha");
+    REQUIRE(reader.tell() == 7); // \r\n consumed
+
+    REQUIRE(reader.read_line(buf) == 4);
+    REQUIRE(test_fixture::to_string(std::span{buf}.subspan(0, 4)) == "beta");
+    REQUIRE(reader.tell() == 11);
+}
+
+TEST_CASE("file_reader read_line handles empty lines", "[io][file_reader]")
+{
+    test_fixture::scoped_temp_file tmp{"io_ripper_core_readline_empty.bin"};
+
+    {
+        ripper::io::core::file_writer writer{tmp.path()};
+        writer.write(test_fixture::to_bytes("\n\nx"));
+        writer.flush();
+    }
+
+    ripper::io::core::file_reader reader{tmp.path()};
+    std::array<std::byte, 32> buf{};
+
+    REQUIRE(reader.read_line(buf) == 0);
+    REQUIRE(reader.tell() == 1);
+
+    REQUIRE(reader.read_line(buf) == 0);
+    REQUIRE(reader.tell() == 2);
+
+    REQUIRE(reader.read_line(buf) == 1);
+    REQUIRE(test_fixture::to_string(std::span{buf}.subspan(0, 1)) == "x");
+}
+
+TEST_CASE("file_reader read_line stops at buffer capacity and defers delimiter",
+          "[io][file_reader]")
+{
+    test_fixture::scoped_temp_file tmp{"io_ripper_core_readline_capacity.bin"};
+
+    {
+        ripper::io::core::file_writer writer{tmp.path()};
+        writer.write(test_fixture::to_bytes("abcdef\nrest"));
+        writer.flush();
+    }
+
+    ripper::io::core::file_reader reader{tmp.path()};
+    std::array<std::byte, 3> buf{};
+
+    REQUIRE(reader.read_line(buf) == 3);
+    REQUIRE(test_fixture::to_string(buf) == "abc");
+    REQUIRE(reader.tell() == 3); // delimiter not yet consumed
+
+    REQUIRE(reader.read_line(buf) == 3);
+    REQUIRE(test_fixture::to_string(buf) == "def");
+    REQUIRE(reader.tell() == 6);
+
+    REQUIRE(reader.read_line(buf) == 0); // empty line, consumes '\n'
+    REQUIRE(reader.tell() == 7);
+}
+
+TEST_CASE("file_reader read_line without trailing newline", "[io][file_reader]")
+{
+    test_fixture::scoped_temp_file tmp{"io_ripper_core_readline_solo.bin"};
+
+    {
+        ripper::io::core::file_writer writer{tmp.path()};
+        writer.write(test_fixture::to_bytes("solo"));
+        writer.flush();
+    }
+
+    ripper::io::core::file_reader reader{tmp.path()};
+    std::array<std::byte, 32> buf{};
+
+    REQUIRE(reader.read_line(buf) == 4);
+    REQUIRE(test_fixture::to_string(std::span{buf}.subspan(0, 4)) == "solo");
+    REQUIRE(reader.tell() == 4);
+    REQUIRE(reader.eof());
+    REQUIRE(reader.read_line(buf) == 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -203,4 +350,64 @@ TEST_CASE("file_reader operations on moved-from instance throw", "[io][file_read
     REQUIRE_THROWS(src.seek(0));         // NOLINT(bugprone-use-after-move)
     REQUIRE_THROWS(src.skip(1));         // NOLINT(bugprone-use-after-move)
     REQUIRE_THROWS(src.peek());          // NOLINT(bugprone-use-after-move)
+    REQUIRE_THROWS(src.read_line(buf));  // NOLINT(bugprone-use-after-move)
+}
+
+TEST_CASE("file_reader peek at EOF throws", "[io][file_reader]")
+{
+    test_fixture::scoped_temp_file tmp{"io_ripper_core_peek_eof.bin"};
+
+    {
+        ripper::io::core::file_writer writer{tmp.path()};
+        writer.write(test_fixture::to_bytes("0123456789"));
+        writer.flush();
+    }
+
+    ripper::io::core::file_reader reader{tmp.path()};
+    reader.seek(reader.size());
+
+    REQUIRE(reader.eof());
+    REQUIRE_THROWS(reader.peek());
+}
+
+TEST_CASE("file_reader empty input reports eof", "[io][file_reader]")
+{
+    test_fixture::scoped_temp_file tmp{"io_ripper_core_empty_reader.bin"};
+
+    {
+        ripper::io::core::file_writer writer{tmp.path()};
+        writer.flush();
+    }
+
+    ripper::io::core::file_reader reader{tmp.path()};
+
+    REQUIRE(reader.size() == 0);
+    REQUIRE(reader.eof());
+    REQUIRE(reader.tell() == 0);
+
+    std::array<std::byte, 4> buf{};
+    REQUIRE(reader.read(buf) == 0);
+    REQUIRE(reader.read_line(buf) == 0);
+    REQUIRE(reader.read_at(buf, 0) == 0);
+    REQUIRE_THROWS(reader.peek());
+}
+
+TEST_CASE("file_reader handles binary data with null bytes", "[io][file_reader]")
+{
+    test_fixture::scoped_temp_file tmp{"io_ripper_core_binary_reader.bin"};
+
+    {
+        ripper::io::core::file_writer writer{tmp.path()};
+        const std::vector<std::byte> payload{std::byte{0}, std::byte{0}, std::byte{'A'}};
+        writer.write(payload);
+        writer.flush();
+    }
+
+    ripper::io::core::file_reader reader{tmp.path()};
+
+    std::array<std::byte, 8> buf{};
+    REQUIRE(reader.read(buf) == 3);
+    REQUIRE(buf[0] == std::byte{0});
+    REQUIRE(buf[1] == std::byte{0});
+    REQUIRE(buf[2] == std::byte{'A'});
 }

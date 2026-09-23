@@ -84,3 +84,51 @@ TEST_CASE("checked_narrow: error message contains operation name", "[util][numer
         REQUIRE(std::string_view{e.what()}.find("my_operation") != std::string_view::npos);
     }
 }
+
+// ---------------------------------------------------------------------------
+// Widening conversions
+// ---------------------------------------------------------------------------
+
+TEST_CASE("checked_narrow: widening signed to signed succeeds", "[util][numeric_cast]")
+{
+    REQUIRE(checked_narrow<std::int64_t>(std::int8_t{100}, "widening") == 100);
+    REQUIRE(checked_narrow<std::int64_t>(std::int8_t{-100}, "widening") == -100);
+}
+
+TEST_CASE("checked_narrow: widening unsigned to signed succeeds", "[util][numeric_cast]")
+{
+    REQUIRE(checked_narrow<std::int64_t>(std::uint8_t{200}, "widening") == 200);
+}
+
+TEST_CASE("checked_narrow: widening signed to unsigned rejects negatives", "[util][numeric_cast]")
+{
+    REQUIRE(checked_narrow<std::uint64_t>(std::int64_t{5}, "widening") == 5);
+    REQUIRE_THROWS_AS(checked_narrow<std::uint64_t>(std::int8_t{-1}, "negative"),
+                      std::runtime_error);
+    REQUIRE_THROWS_AS(checked_narrow<std::uint64_t>(std::int64_t{-1}, "negative"),
+                      std::runtime_error);
+}
+
+TEST_CASE("checked_narrow: widening unsigned to unsigned succeeds", "[util][numeric_cast]")
+{
+    REQUIRE(checked_narrow<std::uint64_t>(std::uint8_t{200}, "widening") == 200);
+}
+
+TEST_CASE("checked_narrow: narrowing signed to signed rejects out-of-range", "[util][numeric_cast]")
+{
+    REQUIRE(checked_narrow<std::int8_t>(std::int64_t{100}, "narrowing") == 100);
+    REQUIRE_THROWS_AS(checked_narrow<std::int8_t>(std::int64_t{-200}, "negative"),
+                      std::runtime_error);
+    REQUIRE_THROWS_AS(checked_narrow<std::int8_t>(std::int64_t{200}, "too big"),
+                      std::runtime_error);
+}
+
+TEST_CASE("checked_narrow: narrowing unsigned to signed rejects out-of-range",
+          "[util][numeric_cast]")
+{
+    REQUIRE(checked_narrow<std::int32_t>(std::uint64_t{100}, "narrowing") == 100);
+    REQUIRE_THROWS_AS(
+        checked_narrow<std::int32_t>(
+            static_cast<std::uint64_t>(std::numeric_limits<std::int32_t>::max()) + 1, "too big"),
+        std::runtime_error);
+}

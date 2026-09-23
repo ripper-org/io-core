@@ -68,8 +68,19 @@ std::size_t memory_reader::read_at(std::span<std::byte> buffer, const std::uint6
         return 0;
     }
 
-    seek(offset);
-    return read(buffer);
+    const std::size_t requested = utils::checked_narrow<std::size_t>(offset, "read_at offset");
+
+    if (requested >= _buffer_view.size())
+    {
+        return 0;
+    }
+
+    const std::size_t remaining = _buffer_view.size() - requested;
+    const std::size_t bytes_to_read = std::min(buffer.size(), remaining);
+
+    std::ranges::copy(_buffer_view.subspan(requested, bytes_to_read), buffer.begin());
+
+    return bytes_to_read;
 }
 
 std::size_t memory_reader::read_line(std::span<std::byte> buffer)
@@ -86,6 +97,15 @@ std::size_t memory_reader::read_line(std::span<std::byte> buffer)
 
         if (current == std::byte{'\n'})
         {
+            break;
+        }
+
+        if (current == std::byte{'\r'})
+        {
+            if (_position < _buffer_view.size() && _buffer_view[_position] == std::byte{'\n'})
+            {
+                ++_position;
+            }
             break;
         }
 

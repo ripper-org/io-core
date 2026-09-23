@@ -18,10 +18,13 @@ namespace ripper::io::core
 /// - The caller must guarantee the provided mutable/resizable byte container
 ///   (`std::vector<std::byte>`) outlives the writer.
 /// - Constructing from temporary vectors is disallowed to prevent dangling.
+/// - After move, the moved-from instance is closed and not usable for output.
 ///
 /// Backend behavior:
 /// - Vector-backed mode: writes may resize the vector and preserve random
 ///   access semantics through `seek`.
+/// - Seeking beyond the current end of output grows the vector, zero-filling
+///   the gap between the previous end and the seek target.
 class IO_RIPPER_CORE_API memory_writer : public writer
 {
 public:
@@ -56,12 +59,14 @@ public:
     memory_writer(const memory_writer&) = delete;
     memory_writer& operator=(const memory_writer&) = delete;
 
-    memory_writer(memory_writer&&) noexcept = default;
-    memory_writer& operator=(memory_writer&&) noexcept = default;
+    /// Move construction and assignment detach the source: the moved-from
+    /// writer becomes closed and unusable for output operations.
+    memory_writer(memory_writer&&) noexcept;
+    memory_writer& operator=(memory_writer&&) noexcept;
 
     /// Return whether this writer accepts output operations.
     ///
-    /// Returns `false` after `close()`.
+    /// Returns `false` after `close()` or after being moved from.
     [[nodiscard]] bool is_open() override;
 
     /// Return current logical write position.
@@ -78,6 +83,7 @@ public:
     /// - Advances `tell()` by `buffer.size()`.
     ///
     /// @throws std::runtime_error when writer is closed.
+    /// @throws std::overflow_error when the requested end position overflows.
     /// @throws std::bad_alloc on allocation failure in vector-backed mode.
     void write(std::span<const std::byte> buffer) override;
 
@@ -88,8 +94,11 @@ public:
     ///
     /// Postconditions:
     /// - Position becomes exactly `offset`.
+    /// - Seeking beyond the current end does not resize the vector until a
+    ///   subsequent `write`; the gap is then zero-filled.
     ///
     /// @throws std::runtime_error when writer is closed.
+    /// @throws std::overflow_error when `offset` exceeds the target range.
     void seek(std::uint64_t offset) override;
 
     /// Flush pending writes.

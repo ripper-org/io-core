@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <stdexcept>
 
 namespace ripper::io::core
@@ -17,6 +18,30 @@ memory_writer::memory_writer(std::vector<std::byte>* buffer) : _buffer_ptr{buffe
     {
         throw std::invalid_argument{"memory_writer buffer pointer cannot be null"};
     }
+}
+
+memory_writer::memory_writer(memory_writer&& other) noexcept
+    : _buffer_ptr{other._buffer_ptr}, _position{other._position}, _is_open{other._is_open}
+{
+    other._buffer_ptr = nullptr;
+    other._position = 0;
+    other._is_open = false;
+}
+
+memory_writer& memory_writer::operator=(memory_writer&& other) noexcept
+{
+    if (this != &other)
+    {
+        _buffer_ptr = other._buffer_ptr;
+        _position = other._position;
+        _is_open = other._is_open;
+
+        other._buffer_ptr = nullptr;
+        other._position = 0;
+        other._is_open = false;
+    }
+
+    return *this;
 }
 
 bool memory_writer::is_open()
@@ -39,6 +64,11 @@ void memory_writer::write(std::span<const std::byte> buffer)
     if (buffer.empty())
     {
         return;
+    }
+
+    if (buffer.size() > std::numeric_limits<std::size_t>::max() - _position)
+    {
+        throw std::overflow_error{"memory_writer write would overflow position"};
     }
 
     const std::size_t requested_end = _position + buffer.size();

@@ -1,9 +1,12 @@
 #pragma once
 
+#include <atomic>
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -37,36 +40,42 @@ inline std::string to_string(const std::span<const std::byte> bytes)
     return out;
 }
 
-inline fs::path shared_reader_fixture_path()
+/// Produce a unique temp path so tests never collide with one another or with
+/// stale files from previous runs.
+inline fs::path unique_temp_path(const std::string& base)
 {
-    return fs::temp_directory_path() / fs::path{"io_ripper_core_reader_fixture.bin"};
+    static std::atomic<std::uint64_t> counter{0};
+    const std::uint64_t id = counter.fetch_add(1);
+    return fs::temp_directory_path() / (base + "_" + std::to_string(id) + ".bin");
 }
 
-inline void ensure_reader_fixture_file(const std::string& payload = "0123456789")
+inline fs::path shared_reader_fixture_path()
 {
-    const fs::path path = shared_reader_fixture_path();
+    return unique_temp_path("io_ripper_core_reader_fixture");
+}
 
-    if (fs::exists(path))
-    {
-        return;
-    }
-
+inline void ensure_reader_fixture_file(const fs::path& path,
+                                       const std::string& payload = "0123456789")
+{
     std::ofstream out(path, std::ios::binary | std::ios::trunc);
     out.write(payload.data(), static_cast<std::streamsize>(payload.size()));
+    out.close();
+
+    if (!out)
+    {
+        throw std::runtime_error{"Failed to create reader fixture file: " + path.string()};
+    }
 }
 
 class scoped_temp_file
 {
 public:
-    explicit scoped_temp_file(std::string filename)
-        : path_(fs::temp_directory_path() / std::move(filename))
-    {
-        fs::remove(path_);
-    }
+    explicit scoped_temp_file(std::string base) : path_(unique_temp_path(std::move(base))) {}
 
     ~scoped_temp_file()
     {
-        fs::remove(path_);
+        std::error_code ec;
+        fs::remove(path_, ec);
     }
 
     scoped_temp_file(const scoped_temp_file&) = delete;

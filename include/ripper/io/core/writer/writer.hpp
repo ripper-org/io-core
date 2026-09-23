@@ -21,6 +21,9 @@ namespace ripper::io::core
 /// - A writer exposes a single logical cursor (`tell`, `seek`).
 /// - `write` emits bytes at the current cursor and advances by `buffer.size()`.
 /// - Empty source buffers are valid no-ops.
+/// - `seek` positions the cursor at an absolute offset; seeking beyond the
+///   current end of output is implementation-defined and documented by concrete
+///   types (for example, sparse gaps may be zero-filled).
 /// - `close` transitions the writer to a closed state; operation validity after
 ///   close is implementation-defined and must be documented by concrete types.
 ///
@@ -28,6 +31,7 @@ namespace ripper::io::core
 /// - Ownership of backing resources is implementation-defined.
 /// - Callers must follow lifetime guarantees documented by concrete writers
 ///   (for example, non-owning memory writers require external buffer lifetime).
+/// - A moved-from writer must not be used for output operations.
 ///
 /// Threading:
 /// - Implementations are not required to be thread-safe.

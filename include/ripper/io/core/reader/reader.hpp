@@ -18,11 +18,15 @@ namespace ripper::io::core
 ///
 /// Contract baseline for all implementations:
 /// - A reader exposes a single logical cursor (`tell`, `seek`, `skip`).
-/// - `read` transfers bytes from current cursor and advances it.
-/// - `read_at` transfers bytes from an absolute offset and may update cursor
-///   according to implementation-defined semantics documented by concrete types.
-/// - Empty destination buffers are valid and should return 0 without side
-///   effects.
+/// - `read` transfers bytes from the current cursor and advances it.
+/// - `read_at` transfers bytes from an absolute offset and never modifies the
+///   cursor (random-access semantics, analogous to POSIX `pread`).
+/// - `read_line` transfers bytes up to a line delimiter and advances the
+///   cursor past the consumed delimiter.
+/// - Empty destination buffers are valid and return 0 without side effects.
+/// - `tell` always reports a value in `[0, size()]`.
+/// - `seek` and `skip` clamp the cursor to `[0, size()]`.
+/// - `eof` becomes `true` when the cursor is at or past the end of the source.
 ///
 /// Lifetime and ownership:
 /// - Ownership of backing resources is implementation-defined.
@@ -42,10 +46,12 @@ public:
     /// stable and consistent with operation validity checks.
     [[nodiscard]] virtual bool is_open() = 0;
 
-    /// Return `true` when the input stream reached end-of-file.
+    /// Return `true` when the logical cursor is at or past the end of the
+    /// backing data source.
     ///
-    /// EOF semantics are backend-specific and may become true only after a read
-    /// attempt that consumes all available bytes.
+    /// This is a position-based check and is identical across backends: it is
+    /// `true` whenever `tell() == size()`, even if no read attempt has yet been
+    /// made beyond the final byte.
     [[nodiscard]] virtual bool eof() = 0;
 
     /// Return the total size in bytes of the backing data source.
@@ -58,7 +64,7 @@ public:
     /// Return the current logical read position.
     ///
     /// Postconditions:
-    /// - Returned value is in `[0, size()]` when bounded by a finite source.
+    /// - Returned value is in `[0, size()]`.
     ///
     /// @throws implementation-defined exception on invalid or unavailable state.
     [[nodiscard]] virtual std::size_t tell() = 0;
@@ -72,7 +78,7 @@ public:
     /// - Cursor position is unchanged.
     ///
     /// @throws implementation-defined exception when peeking is invalid or
-    ///         unavailable at current state/position.
+    ///         unavailable at current state/position (including at end-of-source).
     [[nodiscard]] virtual std::byte peek() = 0;
 
     /// Read up to `buffer.size()` bytes from the current position.
@@ -83,6 +89,7 @@ public:
     /// Postconditions:
     /// - Cursor advances by returned byte count.
     /// - Returns 0 for `buffer.empty()`.
+    /// - Returns 0 when the cursor is already at end-of-source.
     /// - Returned count is in `[0, buffer.size()]`.
     ///
     /// @throws implementation-defined exception on read failures.
@@ -92,36 +99,46 @@ public:
 
     /// Read up to `buffer.size()` bytes starting at absolute `offset`.
     ///
+    /// This operation never modifies the cursor.
+    ///
     /// Preconditions:
     /// - Reader is in a valid readable state.
     ///
     /// Postconditions:
     /// - Returns 0 for `buffer.empty()`.
+    /// - Returns 0 when `offset` is at or beyond `size()`.
     /// - Returned count is in `[0, buffer.size()]`.
-    /// - Final cursor position is implementation-defined and must be documented
-    ///   by concrete implementations.
+    /// - Cursor position is unchanged.
     ///
     /// @throws implementation-defined exception on seek/read failures.
     ///
     /// @return Number of bytes transferred into `buffer`.
     [[nodiscard]] virtual std::size_t read_at(std::span<std::byte> buffer,
-                                              const std::uint64_t offset) = 0;
+                                              std::uint64_t offset) = 0;
 
     /// Read a line into `buffer` from the current position.
     ///
-    /// Reads until line delimiter, end-of-stream, or destination capacity.
+    /// Reads until a line delimiter (`"\n"`, `"\r"`, or `"\r\n"`), end-of-source,
+    /// or destination capacity is reached. The delimiter is consumed from the
+    /// source but is never written into `buffer`. No null terminator is written.
     ///
     /// Preconditions:
     /// - Reader is in a valid readable state.
     ///
     /// Postconditions:
-    /// - Cursor advances by consumed source bytes (implementation-defined exact
-    ///   delimiter handling).
+    /// - Cursor advances by consumed source bytes, including a consumed
+    ///   delimiter when one is present.
     /// - Returns 0 for `buffer.empty()`.
+    /// - Returns 0 when the cursor is already at end-of-source.
+    /// - Returned count equals the number of bytes written into `buffer` and
+    ///   never includes the delimiter.
+    /// - If `buffer` becomes full before a delimiter is reached, reading stops
+    ///   there and the remaining bytes (including the eventual delimiter) are
+    ///   left for subsequent calls.
     ///
     /// @throws implementation-defined exception on read failures.
     ///
-    /// @return Number of bytes transferred into `buffer`.
+    /// @return Number of bytes written into `buffer`.
     [[nodiscard]] virtual std::size_t read_line(std::span<std::byte> buffer) = 0;
 
     /// Move the current position to absolute `offset`.
@@ -130,10 +147,11 @@ public:
     /// - Reader is in a valid seekable state.
     ///
     /// Postconditions:
-    /// - Next sequential read starts from implementation-defined position based
-    ///   on `offset` and backend constraints.
+    /// - The cursor is clamped to `[0, size()]`; seeking beyond the end places
+    ///   the cursor at `size()`.
+    /// - Next sequential read starts from the resulting cursor position.
     ///
-    /// @throws implementation-defined exception on invalid offset/state.
+    /// @throws implementation-defined exception on invalid state.
     virtual void seek(std::uint64_t offset) = 0;
 
     /// Advance the current position by `n` bytes.
@@ -142,7 +160,8 @@ public:
     /// - Reader is in a valid seekable state.
     ///
     /// Postconditions:
-    /// - Cursor advances by implementation-defined effective distance.
+    /// - The cursor is clamped to `[0, size()]`; skipping past the end places
+    ///   the cursor at `size()`.
     ///
     /// @throws implementation-defined exception on invalid state.
     virtual void skip(std::size_t n) = 0;

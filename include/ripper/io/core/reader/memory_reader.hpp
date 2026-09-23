@@ -83,26 +83,27 @@ public:
     /// @return Number of bytes transferred.
     [[nodiscard]] std::size_t read(std::span<std::byte> buffer) override;
 
-    /// Read bytes starting at absolute `offset`.
+    /// Read bytes starting at absolute `offset` without changing the cursor.
     ///
     /// Postconditions:
-    /// - Equivalent to `seek(offset)` then `read(buffer)`.
-    /// - Final position is `min(offset, size()) + bytes_read`.
-    /// - Returns 0 when `buffer.empty()`.
+    /// - Cursor position is unchanged.
+    /// - Returns 0 when `buffer.empty()` or `offset >= size()`.
+    /// - Returned count is in `[0, buffer.size()]`.
     ///
     /// @return Number of bytes transferred.
     [[nodiscard]] std::size_t read_at(std::span<std::byte> buffer, std::uint64_t offset) override;
 
-    /// Read a line into `buffer`, excluding the newline byte.
+    /// Read a line into `buffer`, excluding the line delimiter.
     ///
-    /// Reads until newline (`'\n'`), end-of-buffer, or `buffer` capacity.
-    /// If a newline is encountered it is consumed from the stream position but
-    /// is not copied to `buffer`.
+    /// Reads until a line delimiter (`'\n'`, `'\r'`, or `"\r\n"`), end-of-buffer,
+    /// or `buffer` capacity. The delimiter is consumed from the stream position
+    /// but is not copied to `buffer`.
     ///
     /// Postconditions:
     /// - Returns 0 when `buffer.empty()` or `eof() == true`.
-    /// - Advances `tell()` by consumed input bytes (including delimiter when
-    ///   present).
+    /// - Advances `tell()` by consumed input bytes (including the delimiter
+    ///   when present).
+    /// - Returns 0 when the cursor is already at end-of-buffer.
     ///
     /// @return Number of non-delimiter bytes written to `buffer`.
     [[nodiscard]] std::size_t read_line(std::span<std::byte> buffer) override;

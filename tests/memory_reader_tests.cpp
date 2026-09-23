@@ -53,6 +53,22 @@ TEST_CASE_METHOD(memory_reader_fixture, "memory_reader seek and peek are consist
     reader.seek(5);
     REQUIRE(reader.tell() == 5);
     REQUIRE(static_cast<char>(reader.peek()) == '5');
+    REQUIRE(reader.tell() == 5); // peek must not advance
+}
+
+TEST_CASE_METHOD(memory_reader_fixture, "memory_reader seek and skip clamp at end",
+                 "[io][memory_reader]")
+{
+    ripper::io::core::memory_reader reader{payload};
+
+    reader.seek(100);
+    REQUIRE(reader.tell() == 10);
+    REQUIRE(reader.eof());
+
+    reader.seek(0);
+    reader.skip(100);
+    REQUIRE(reader.tell() == 10);
+    REQUIRE(reader.eof());
 }
 
 // ---------------------------------------------------------------------------
@@ -74,6 +90,18 @@ TEST_CASE_METHOD(memory_reader_fixture, "memory_reader read_at with empty span r
     ripper::io::core::memory_reader reader{payload};
     std::span<std::byte> empty{};
     REQUIRE(reader.read_at(empty, 5) == 0);
+    REQUIRE(reader.tell() == 0); // position unchanged
+}
+
+TEST_CASE_METHOD(memory_reader_fixture, "memory_reader read_at beyond end returns 0",
+                 "[io][memory_reader]")
+{
+    ripper::io::core::memory_reader reader{payload};
+
+    std::array<std::byte, 4> slice{};
+    REQUIRE(reader.read_at(slice, 10) == 0);
+    REQUIRE(reader.read_at(slice, 100) == 0);
+    REQUIRE(reader.tell() == 0); // position unchanged
 }
 
 TEST_CASE_METHOD(memory_reader_fixture, "memory_reader skip advances position",
@@ -116,7 +144,7 @@ TEST_CASE_METHOD(memory_reader_fixture, "memory_reader read past EOF returns few
     REQUIRE(test_fixture::to_string(std::span{buffer}.subspan(0, 2)) == "89");
 }
 
-TEST_CASE_METHOD(memory_reader_fixture, "memory_reader read_at leaves stream position after window",
+TEST_CASE_METHOD(memory_reader_fixture, "memory_reader read_at leaves stream position unchanged",
                  "[io][memory_reader]")
 {
     ripper::io::core::memory_reader reader{payload};
@@ -124,7 +152,8 @@ TEST_CASE_METHOD(memory_reader_fixture, "memory_reader read_at leaves stream pos
     std::array<std::byte, 3> slice{};
     std::ignore = reader.read_at(slice, 2); // reads bytes [2,3,4]
 
-    REQUIRE(reader.tell() == 5); // seeked to 2, read 3 -> position is 5
+    REQUIRE(test_fixture::to_string(slice) == "234");
+    REQUIRE(reader.tell() == 0); // read_at must not move the cursor
 }
 
 TEST_CASE_METHOD(memory_reader_fixture, "memory_reader seek to beginning resets position",
@@ -144,6 +173,10 @@ TEST_CASE_METHOD(memory_reader_fixture, "memory_reader seek to beginning resets 
     REQUIRE(test_fixture::to_string(buf1) == test_fixture::to_string(buf2));
 }
 
+// ---------------------------------------------------------------------------
+// read_line
+// ---------------------------------------------------------------------------
+
 TEST_CASE("memory_reader read_line reads up to newline", "[io][memory_reader]")
 {
     const auto payload = test_fixture::to_bytes("hello\nworld");
@@ -157,6 +190,100 @@ TEST_CASE("memory_reader read_line reads up to newline", "[io][memory_reader]")
     REQUIRE(reader.tell() == 6); // includes consumed delimiter
 }
 
+TEST_CASE("memory_reader read_line handles CR line ending", "[io][memory_reader]")
+{
+    const auto payload = test_fixture::to_bytes("alpha\rbeta");
+    ripper::io::core::memory_reader reader{payload};
+
+    std::array<std::byte, 32> buf{};
+
+    REQUIRE(reader.read_line(buf) == 5);
+    REQUIRE(test_fixture::to_string(std::span{buf}.subspan(0, 5)) == "alpha");
+    REQUIRE(reader.tell() == 6);
+
+    REQUIRE(reader.read_line(buf) == 4);
+    REQUIRE(test_fixture::to_string(std::span{buf}.subspan(0, 4)) == "beta");
+    REQUIRE(reader.tell() == 10);
+}
+
+TEST_CASE("memory_reader read_line handles CRLF line ending", "[io][memory_reader]")
+{
+    const auto payload = test_fixture::to_bytes("alpha\r\nbeta");
+    ripper::io::core::memory_reader reader{payload};
+
+    std::array<std::byte, 32> buf{};
+
+    REQUIRE(reader.read_line(buf) == 5);
+    REQUIRE(test_fixture::to_string(std::span{buf}.subspan(0, 5)) == "alpha");
+    REQUIRE(reader.tell() == 7); // \r\n consumed
+
+    REQUIRE(reader.read_line(buf) == 4);
+    REQUIRE(test_fixture::to_string(std::span{buf}.subspan(0, 4)) == "beta");
+    REQUIRE(reader.tell() == 11);
+}
+
+TEST_CASE("memory_reader read_line handles empty lines", "[io][memory_reader]")
+{
+    const auto payload = test_fixture::to_bytes("\n\nx");
+    ripper::io::core::memory_reader reader{payload};
+
+    std::array<std::byte, 32> buf{};
+
+    REQUIRE(reader.read_line(buf) == 0);
+    REQUIRE(reader.tell() == 1);
+
+    REQUIRE(reader.read_line(buf) == 0);
+    REQUIRE(reader.tell() == 2);
+
+    REQUIRE(reader.read_line(buf) == 1);
+    REQUIRE(test_fixture::to_string(std::span{buf}.subspan(0, 1)) == "x");
+}
+
+TEST_CASE("memory_reader read_line stops at buffer capacity and defers delimiter",
+          "[io][memory_reader]")
+{
+    const auto payload = test_fixture::to_bytes("abcdef\nrest");
+    ripper::io::core::memory_reader reader{payload};
+
+    std::array<std::byte, 3> buf{};
+
+    REQUIRE(reader.read_line(buf) == 3);
+    REQUIRE(test_fixture::to_string(buf) == "abc");
+    REQUIRE(reader.tell() == 3); // delimiter not yet consumed
+
+    REQUIRE(reader.read_line(buf) == 3);
+    REQUIRE(test_fixture::to_string(buf) == "def");
+    REQUIRE(reader.tell() == 6);
+
+    REQUIRE(reader.read_line(buf) == 0); // empty line, consumes '\n'
+    REQUIRE(reader.tell() == 7);
+}
+
+TEST_CASE("memory_reader read_line without trailing newline", "[io][memory_reader]")
+{
+    const auto payload = test_fixture::to_bytes("solo");
+    ripper::io::core::memory_reader reader{payload};
+
+    std::array<std::byte, 32> buf{};
+    REQUIRE(reader.read_line(buf) == 4);
+    REQUIRE(test_fixture::to_string(std::span{buf}.subspan(0, 4)) == "solo");
+    REQUIRE(reader.tell() == 4);
+    REQUIRE(reader.eof());
+    REQUIRE(reader.read_line(buf) == 0);
+}
+
+TEST_CASE("memory_reader handles binary data with null bytes", "[io][memory_reader]")
+{
+    const std::vector<std::byte> payload{std::byte{0}, std::byte{0}, std::byte{'A'}};
+    ripper::io::core::memory_reader reader{payload};
+
+    std::array<std::byte, 8> buf{};
+    REQUIRE(reader.read(buf) == 3);
+    REQUIRE(buf[0] == std::byte{0});
+    REQUIRE(buf[1] == std::byte{0});
+    REQUIRE(buf[2] == std::byte{'A'});
+}
+
 // ---------------------------------------------------------------------------
 // Error cases
 // ---------------------------------------------------------------------------
@@ -166,5 +293,21 @@ TEST_CASE_METHOD(memory_reader_fixture, "memory_reader peek at EOF throws", "[io
     ripper::io::core::memory_reader reader{payload};
     reader.seek(reader.size());
 
+    REQUIRE_THROWS(reader.peek());
+}
+
+TEST_CASE("memory_reader empty input reports eof", "[io][memory_reader]")
+{
+    const std::vector<std::byte> empty{};
+    ripper::io::core::memory_reader reader{empty};
+
+    REQUIRE(reader.size() == 0);
+    REQUIRE(reader.eof());
+    REQUIRE(reader.tell() == 0);
+
+    std::array<std::byte, 4> buf{};
+    REQUIRE(reader.read(buf) == 0);
+    REQUIRE(reader.read_line(buf) == 0);
+    REQUIRE(reader.read_at(buf, 0) == 0);
     REQUIRE_THROWS(reader.peek());
 }
