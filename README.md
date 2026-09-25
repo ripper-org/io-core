@@ -24,6 +24,7 @@ single-responsibility in mind.
 - [User guide](docs/USAGE.md) — building, installing, and CMake integration
 - [Contributor guide](docs/CONTRIBUTING.md) — building from source, running
   tests, formatting, and static analysis
+- [Changelog](CHANGELOG.md)
 
 ## License
 

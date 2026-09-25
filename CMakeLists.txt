@@ -121,6 +121,7 @@ if(IO_RIPPER_CORE_BUILD_SHARED)
     set(IO_RIPPER_CORE_LIBRARY_TYPE SHARED)
 else()
     set(IO_RIPPER_CORE_LIBRARY_TYPE STATIC)
+    set(IO_RIPPER_CORE_STATIC_DEFINE IO_RIPPER_CORE_STATIC_DEFINE)
 endif()
 
 add_library(io_ripper_core ${IO_RIPPER_CORE_LIBRARY_TYPE}
@@ -131,16 +132,26 @@ add_library(io_ripper_core::io_ripper_core ALIAS io_ripper_core)
 
 target_compile_features(io_ripper_core PUBLIC cxx_std_23)
 
+# Static builds must advertise IO_RIPPER_CORE_STATIC_DEFINE to consumers so the
+# generated export header expands IO_RIPPER_CORE_API to nothing (no dllimport /
+# dllexport semantics) on every platform, including Windows.
+if(IO_RIPPER_CORE_STATIC_DEFINE)
+    target_compile_definitions(io_ripper_core PUBLIC ${IO_RIPPER_CORE_STATIC_DEFINE})
+endif()
+
 set_target_properties(io_ripper_core PROPERTIES
     OUTPUT_NAME io_ripper_core
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
     CXX_VISIBILITY_PRESET hidden
     VISIBILITY_INLINES_HIDDEN YES
+    # Keep the static archive position-independent so it can be linked into
+    # shared consumers on platforms that require PIC (e.g. Linux).
+    POSITION_INDEPENDENT_CODE ON
 )
 
 # ------------------------------------------------------------------------------
-# Export header (for future shared library support)
+# Export header (shared/static symbol visibility)
 # ------------------------------------------------------------------------------
 include(GenerateExportHeader)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/ripper/io/core)
@@ -216,6 +227,12 @@ if(IO_RIPPER_CORE_ENABLE_TESTS)
 
     if(NOT TARGET Catch2::Catch2)
         if(NOT Catch2_POPULATED)
+            # Keep dev-install footprints small: Catch2's documentation and
+            # extras are not needed by consumers. The Catch2 library itself is
+            # still installed in top-level dev builds; release installs should
+            # configure with -DIO_RIPPER_CORE_ENABLE_TESTS=OFF.
+            set(CATCH_INSTALL_DOCS OFF CACHE BOOL "Install Catch2 documentation" FORCE)
+            set(CATCH_INSTALL_EXTRAS OFF CACHE BOOL "Install Catch2 extras" FORCE)
             FetchContent_Declare(
                 Catch2
                 GIT_REPOSITORY https://github.com/catchorg/Catch2.git

@@ -15,7 +15,7 @@ ifneq ($(strip $(GENERATOR)),)
 CMAKE_CONFIGURE_ARGS += -G "$(GENERATOR)"
 endif
 
-.PHONY: help configure build test format format-check tidy clean rebuild install depclean
+.PHONY: help configure build test format format-check tidy clean rebuild install install-check depclean
 
 help:
 	@echo "Available targets:"
@@ -26,6 +26,7 @@ help:
 	@echo "  make format-check - Verify clang-format compliance"
 	@echo "  make tidy         - Run clang-tidy static analysis"
 	@echo "  make install      - Install from $(BUILD_DIR)"
+	@echo "  make install-check - Install to a temp prefix and verify an external CMake consumer (static + shared)"
 	@echo "  make clean        - Remove $(BUILD_DIR) and $(DEPS_DIR)"
 	@echo "  make rebuild      - Clean then build"
 	@echo "  make depclean     - Remove $(DEPS_DIR) only"
@@ -55,6 +56,9 @@ tidy: configure
 
 install: build
 	$(CMAKE) --install $(BUILD_DIR)
+
+install-check:
+	./scripts/verify_install.sh
 
 clean:
 	$(CMAKE) -E rm -rf $(BUILD_DIR) $(DEPS_DIR)

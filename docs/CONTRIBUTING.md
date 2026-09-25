@@ -26,6 +26,7 @@ This configures the project in `build/` (Debug mode) and compiles the library an
 | `make format-check`     | Verify `clang-format` compliance         |
 | `make tidy`             | Run `clang-tidy` static analysis         |
 | `make install`          | Install the library from `build/`        |
+| `make install-check`    | Install to a temp prefix and verify an external CMake consumer (static + shared) |
 | `make clean`            | Remove `build/` and `.deps/`             |
 | `make rebuild`          | Clean then build                         |
 | `make depclean`         | Remove `.deps/` only                     |
@@ -48,6 +49,20 @@ automatically fetched by CMake when tests are enabled.
 ```bash
 make test
 ```
+
+### Sanitizers
+
+To run the suite under AddressSanitizer and UndefinedBehaviorSanitizer (Linux):
+
+```bash
+cmake -S . -B build-san -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+    -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+cmake --build build-san -j
+ctest --test-dir build-san --output-on-failure
+```
+
+The sanitizer job is also part of the GitHub Actions workflow.
 
 ## Code style
 
