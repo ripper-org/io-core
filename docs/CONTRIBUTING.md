@@ -17,29 +17,29 @@ This configures the project in `build/` (Debug mode) and compiles the library an
 
 ## Available targets
 
-| Command                 | Description                              |
-| ----------------------- | ---------------------------------------- |
-| `make configure`        | Run CMake configure only                 |
-| `make build`            | Configure and build library + tests      |
-| `make test`             | Build and run the CTest suite            |
-| `make format`           | Apply `clang-format` to all sources      |
-| `make format-check`     | Verify `clang-format` compliance         |
-| `make tidy`             | Run `clang-tidy` static analysis         |
-| `make install`          | Install the library from `build/`        |
-| `make install-check`    | Install to a temp prefix and verify an external CMake consumer (static + shared) |
-| `make clean`            | Remove `build/` and `.deps/`             |
-| `make rebuild`          | Clean then build                         |
-| `make depclean`         | Remove `.deps/` only                     |
+| Command              | Description                                                                      |
+| -------------------- | -------------------------------------------------------------------------------- |
+| `make configure`     | Run CMake configure only                                                         |
+| `make build`         | Configure and build library + tests                                              |
+| `make test`          | Build and run the CTest suite                                                    |
+| `make format`        | Apply `clang-format` to all sources                                              |
+| `make format-check`  | Verify `clang-format` compliance                                                 |
+| `make tidy`          | Run `clang-tidy` static analysis                                                 |
+| `make install`       | Install the library from `build/`                                                |
+| `make install-check` | Install to a temp prefix and verify an external CMake consumer (static + shared) |
+| `make clean`         | Remove `build/` and `.deps/`                                                     |
+| `make rebuild`       | Clean then build                                                                 |
+| `make depclean`      | Remove `.deps/` only                                                             |
 
 Configuration variables: `BUILD_DIR`, `BUILD_TYPE`, `GENERATOR`, `DEPS_DIR`.
 
 ## CMake options
 
-| Option                              | Default | Description                              |
-| ----------------------------------- | ------- | ---------------------------------------- |
-| `IO_RIPPER_CORE_BUILD_SHARED`       | `OFF`   | Build as a shared library                |
-| `IO_RIPPER_CORE_ENABLE_TESTS`       | auto    | `ON` when this is the top-level project  |
-| `IO_RIPPER_CORE_TIDY_INCLUDE_TESTS` | `OFF`   | Include test sources in clang-tidy       |
+| Option                              | Default | Description                             |
+| ----------------------------------- | ------- | --------------------------------------- |
+| `IO_RIPPER_CORE_BUILD_SHARED`       | `OFF`   | Build as a shared library               |
+| `IO_RIPPER_CORE_ENABLE_TESTS`       | auto    | `ON` when this is the top-level project |
+| `IO_RIPPER_CORE_TIDY_INCLUDE_TESTS` | `OFF`   | Include test sources in clang-tidy      |
 
 ## Test suite
 

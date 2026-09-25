@@ -58,11 +58,11 @@ Use `GIT_TAG main` only for development snapshots.
 
 ## CMake options
 
-| Option                        | Default | Description                             |
-| ----------------------------- | ------- | --------------------------------------- |
-| `IO_RIPPER_CORE_BUILD_SHARED` | `OFF`   | Build as a shared library (static by default) |
-| `IO_RIPPER_CORE_ENABLE_TESTS` | auto    | Enable test suite (`ON` standalone, `OFF` via FetchContent) |
-| `IO_RIPPER_CORE_TIDY_INCLUDE_TESTS` | `OFF` | Include tests in clang-tidy analysis |
+| Option                              | Default | Description                                                 |
+| ----------------------------------- | ------- | ----------------------------------------------------------- |
+| `IO_RIPPER_CORE_BUILD_SHARED`       | `OFF`   | Build as a shared library (static by default)               |
+| `IO_RIPPER_CORE_ENABLE_TESTS`       | auto    | Enable test suite (`ON` standalone, `OFF` via FetchContent) |
+| `IO_RIPPER_CORE_TIDY_INCLUDE_TESTS` | `OFF`   | Include tests in clang-tidy analysis                        |
 
 ## Platforms and compilers
 
