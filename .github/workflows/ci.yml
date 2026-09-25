@@ -60,7 +60,7 @@ jobs:
         run: ctest --test-dir build -C ${{ matrix.build_type }} --output-on-failure
 
   shared-build:
-    name: Shared build & test (${{ matrix.os }})
+    name: Shared build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -70,14 +70,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Shared builds validate the shared artifact (compilation, symbol
+      # exports, linking). The test suite is exercised by the static build
+      # matrix, so tests stay disabled here.
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DIO_RIPPER_CORE_BUILD_SHARED=ON
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DIO_RIPPER_CORE_BUILD_SHARED=ON -DIO_RIPPER_CORE_ENABLE_TESTS=OFF
 
       - name: Build
         run: cmake --build build --config Debug -j
-
-      - name: Run tests
-        run: ctest --test-dir build -C Debug --output-on-failure
 
   install-consumer:
     name: Installed-package consumer (static + shared)

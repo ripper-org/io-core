@@ -119,6 +119,11 @@ endif()
 # ------------------------------------------------------------------------------
 if(IO_RIPPER_CORE_BUILD_SHARED)
     set(IO_RIPPER_CORE_LIBRARY_TYPE SHARED)
+    # Co-locate DLLs and executables in a single runtime directory so Windows
+    # test binaries can resolve io_ripper_core.dll at runtime. Without this,
+    # test discovery and ctest fail with STATUS_DLL_NOT_FOUND (0xc0000135)
+    # because the DLL lands in a different directory than the test executable.
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 else()
     set(IO_RIPPER_CORE_LIBRARY_TYPE STATIC)
     set(IO_RIPPER_CORE_STATIC_DEFINE IO_RIPPER_CORE_STATIC_DEFINE)
