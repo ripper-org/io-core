@@ -1,4 +1,4 @@
-# Ripper IO Core
+# IO Core
 
 **Platform-independent I/O abstractions for the Ripper ecosystem.**
 
